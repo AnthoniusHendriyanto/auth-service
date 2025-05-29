@@ -237,7 +237,6 @@ go run cmd/main.go
 ## 📌 Notes
 
 * Make sure to include header `X-Device-Fingerprint` on login
-* Timezone is handled in `Asia/Jakarta` in code layer (not PostgreSQL)
 * DTOs are placed in `internal/auth/dto` for clarity
 
 ---
