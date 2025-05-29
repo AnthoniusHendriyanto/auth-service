@@ -38,8 +38,7 @@ func (s *UserService) Register(input dto.RegisterInput) (*domain.User, error) {
 		return nil, err
 	}
 
-	loc, _ := time.LoadLocation("Asia/Jakarta")
-	now := time.Now().In(loc)
+	now := time.Now()
 
 	user := &domain.User{
 		ID:           uuid.New().String(),
@@ -72,8 +71,7 @@ func (s *UserService) Login(input dto.LoginInput) (*dto.TokenResponse, error) {
 		return nil, err
 	}
 
-	loc := time.FixedZone("Asia/Jakarta", 7*3600) // safer and cleaner
-	now := time.Now().In(loc)
+	now := time.Now()
 
 	refreshTokenObj := &domain.RefreshToken{
 		ID:                uuid.New().String(),
