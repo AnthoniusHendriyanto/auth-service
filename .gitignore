@@ -21,7 +21,7 @@ go.work.sum
 
 # IDE & Editor folders
 .idea/
-*.iml
+#*.iml
 
 # Environment config
 .env*
