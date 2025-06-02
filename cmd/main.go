@@ -1,8 +1,6 @@
 package main
 
 import (
-	"context"
-
 	"github.com/AnthoniusHendriyanto/auth-service/config"
 	"github.com/AnthoniusHendriyanto/auth-service/db"
 	"github.com/AnthoniusHendriyanto/auth-service/internal/auth/handler"
@@ -13,10 +11,11 @@ import (
 
 func main() {
 	cfg := config.Load()
-	dbPool, _ := db.NewPostgresPool(context.TODO())
+
+	dbPool := db.NewPostgresPool(cfg.DBURL)
 	userRepo := repo.NewPostgresUserRepository(dbPool)
 	tokenService := service.NewTokenService(cfg.AccessTokenSecret, cfg.RefreshTokenSecret, cfg.AccessExpiryMin, cfg.RefreshExpiryMin)
-	userService := service.NewUserService(userRepo, tokenService)
+	userService := service.NewUserService(userRepo, tokenService, cfg.MaxActiveRefreshTokens)
 	authHandler := handler.NewAuthHandler(userService)
 
 	app := fiber.New()
