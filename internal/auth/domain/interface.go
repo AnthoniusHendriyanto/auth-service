@@ -6,4 +6,8 @@ type UserRepository interface {
 	StoreRefreshToken(rt *RefreshToken) error
 	RecordLoginAttempt(email, ip string, success bool) error
 	UpsertTrustedDevice(userID, fingerprint, userAgent, ip string) error
+	GetRefreshToken(token string) (*RefreshToken, error)
+	RevokeRefreshToken(id string) error
+	GetActiveCountByUserID(userID string) (int, error)
+	DeleteOldestByUserID(userID string) error
 }

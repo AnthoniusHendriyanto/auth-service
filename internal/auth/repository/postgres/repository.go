@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/AnthoniusHendriyanto/auth-service/internal/auth/domain"
@@ -29,8 +30,8 @@ func (r *PostgresRepository) GetByEmail(email string) (*domain.User, error) {
 	var user domain.User
 	err := row.Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("user with email %s not found", email)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get user by email: %w", err)
 	}
@@ -78,4 +79,71 @@ func (r *PostgresRepository) UpsertTrustedDevice(userID, fingerprint, userAgent,
 			user_agent = EXCLUDED.user_agent
 	`, userID, fingerprint, userAgent, ip)
 	return err
+}
+
+func (r *PostgresRepository) GetRefreshToken(token string) (*domain.RefreshToken, error) {
+	row := r.db.QueryRow(context.Background(), `
+		SELECT id, user_id, token, device_fingerprint, ip_address, user_agent, expires_at, created_at, revoked
+		FROM refresh_tokens
+		WHERE token = $1
+	`, token)
+
+	var rt domain.RefreshToken
+	err := row.Scan(
+		&rt.ID,
+		&rt.UserID,
+		&rt.Token,
+		&rt.DeviceFingerprint,
+		&rt.IPAddress,
+		&rt.UserAgent,
+		&rt.ExpiresAt,
+		&rt.CreatedAt,
+		&rt.Revoked,
+	)
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &rt, nil
+}
+
+func (r *PostgresRepository) RevokeRefreshToken(id string) error {
+	_, err := r.db.Exec(context.Background(),
+		`UPDATE refresh_tokens SET revoked = TRUE WHERE id = $1`, id)
+	return err
+}
+
+func (r *PostgresRepository) GetActiveCountByUserID(userID string) (int, error) {
+	query := `
+		SELECT COUNT(id)
+		FROM refresh_tokens
+		WHERE user_id = $1
+		  AND revoked = FALSE
+		  AND expires_at > NOW()
+	`
+	var count int
+	err := r.db.QueryRow(context.Background(), query, userID).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (r *PostgresRepository) DeleteOldestByUserID(userID string) error {
+	query := `
+		DELETE FROM refresh_tokens
+		WHERE id = (
+			SELECT id FROM refresh_tokens
+			WHERE user_id = $1 AND revoked = FALSE
+			ORDER BY created_at ASC
+			LIMIT 1
+		)
+	`
+	_, err := r.db.Exec(context.Background(), query, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete oldest refresh token for user %s: %w", userID, err)
+	}
+	return nil
 }

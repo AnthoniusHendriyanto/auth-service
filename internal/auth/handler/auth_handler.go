@@ -57,3 +57,21 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(tokenPair)
 }
+
+func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
+	var input dto.RefreshInput
+	if err := c.BodyParser(&input); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid input"})
+	}
+
+	input.Fingerprint = c.Get("X-Device-Fingerprint")
+	input.IPAddress = c.IP()
+	input.UserAgent = string(c.Request().Header.UserAgent())
+
+	tokens, err := h.userService.Refresh(input)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(tokens)
+}
