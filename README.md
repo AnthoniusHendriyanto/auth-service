@@ -1,244 +1,94 @@
-# Auth Service
+# Porto Auth Service
 
-This is an authentication microservice written in Go using the Fiber framework and PostgreSQL (via pgx). It implements:
-
-* User registration and login
-* Access/refresh token generation using JWT
-* Token expiration and storage in DB
-* Metadata logging: device fingerprint, IP address, user-agent
-* Trusted device tracking
-* Login attempt history
+A robust, modular authentication service for the Porto application ecosystem, built in Go using Fiber. This service handles user registration, login, refresh token rotation, secure device tracking, and session metadata logging.
 
 ---
 
-## ✅ Features Implemented
+## Features
 
-* [x] User registration (`/register`)
-* [x] User login (`/login`)
-* [x] JWT token generation
-* [x] Refresh token storage in DB
-* [x] Device & session metadata capture (fingerprint, IP, user-agent)
-* [x] Login attempt recording
-* [x] Trusted device upsert
-* [x] Clean Architecture
+- ✅ JWT-based authentication (access + refresh tokens)
+- 🔁 Refresh token rotation with metadata validation
+- 🧠 Trusted device tracking and upsert logic
+- 🕵️‍♂️ Login attempt logging
+- 🔐 Token revocation on logout/refresh
+- 🌍 Environment-based config via Viper
+- 🗃️ PostgreSQL database using `pgx`
+- 🧪 Test-driven development (TDD) and Clean Architecture
 
-## 🛠 Tech Stack
+---
 
-* **Go** (1.20+)
-* **Fiber** (HTTP framework)
-* **pgx** (PostgreSQL driver)
-* **uuid**, **bcrypt**, **jwt-go**
-* PostgreSQL
-
-## 📦 Folder Structure
-
-```
-auth-service/
-├── cmd/                     # Entry point (main.go)
-│   └── main.go
-├── config/                  # Environment loading (config.go)
-│   └── config.go
-├── db/                      # DB connection helper
-│   └── db.go
-├── internal/
-│   ├── auth/
-│   │   ├── domain/          # Interfaces, core structs
-│   │   ├── dto/             # Request/response DTOs
-│   │   ├── handler/         # HTTP handler functions
-│   │   ├── repository/      # Interfaces + Postgres implementation
-│   │   └── service/         # Business logic (UserService, TokenService)
-├── migrations/              # SQL migration scripts
-│   └── 001_init.sql
-├── pkg/
-│   ├── middleware/          # Middleware (future use)
-│   └── utils/               # Shared helpers (optional)
-├── .env.dev
-├── .env.prod
-├── go.mod
-├── LICENSE
-└── README.md
-```
-
-## 🔐 API Endpoints
+## API Endpoints
 
 ### `POST /api/v1/register`
-
-Registers a new user
-
-#### Request
-
-```json
-{
-  "email": "user@example.com",
-  "password": "yourpassword"
-}
-```
-
-#### Response
-
-```json
-{
-  "id": "uuid",
-  "email": "user@example.com"
-}
-```
-
----
+Registers a new user.
 
 ### `POST /api/v1/login`
+Authenticates a user and returns access & refresh tokens.
 
-Authenticates user and returns access & refresh tokens
-
-#### Headers
-
-```
-X-Device-Fingerprint: your-device-id
-Content-Type: application/json
-```
-
-#### Body
-
-```json
-{
-  "email": "user@example.com",
-  "password": "yourpassword"
-}
-```
-
-#### Response
-
-```json
-{
-  "access_token": "...",
-  "refresh_token": "..."
-}
-```
+### `POST /api/v1/refresh`
+Rotates the refresh token (revokes old, issues new tokens) after validating metadata.
 
 ---
 
-## 🧪 Example cURL Requests
-
-### Register
-
-```bash
-curl -X POST http://localhost:8080/api/v1/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"123456"}'
-```
-
-### Login
-
-```bash
-curl -X POST http://localhost:8080/api/v1/login \
-  -H "Content-Type: application/json" \
-  -H "X-Device-Fingerprint: abc123" \
-  -d '{"email":"user@example.com","password":"123456"}'
-```
+## Tech Stack
+- **Language:** Go
+- **Framework:** Fiber
+- **Database:** PostgreSQL (accessed via `pgx`)
+- **Migration Tool:** Manual SQL (no Atlas/golang-migrate)
+- **Config:** Viper
 
 ---
 
-## 📋 PostgreSQL Schema
-
-```sql
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-
-CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE TABLE refresh_tokens (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  token TEXT NOT NULL,
-  device_fingerprint TEXT,
-  ip_address TEXT,
-  user_agent TEXT,
-  expires_at TIMESTAMP NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
-  revoked BOOLEAN DEFAULT FALSE
-);
-
-CREATE TABLE trusted_devices (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  device_fingerprint TEXT NOT NULL,
-  user_agent TEXT,
-  ip_address TEXT,
-  last_seen TIMESTAMP DEFAULT NOW(),
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE TABLE login_attempts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email TEXT NOT NULL,
-  ip_address TEXT,
-  attempt_time TIMESTAMP DEFAULT NOW(),
-  successful BOOLEAN
-);
-```
+## Security Features
+- Device fingerprint, IP address, and user agent tracking
+- Enforced refresh token expiry and limit (e.g. max 5 active tokens per user)
+- Refresh token revocation & reissuance with fingerprint match
 
 ---
 
-## ✅ Environment Variables
-
+## Environment Variables
 ```
 PORT=8080
-DATABASE_URL=postgres://postgres:password@localhost:5432/auth?sslmode=disable
-ACCESS_TOKEN_SECRET=youraccesstokensecret
-REFRESH_TOKEN_SECRET=yourrefreshtokensecret
-ACCESS_TOKEN_EXPIRY=15 # minutes
-REFRESH_TOKEN_EXPIRY=10080 # 7 days (in minutes)
+DB_URL=postgres://user:pass@localhost:5432/porto_auth
+ACCESS_TOKEN_SECRET=...
+REFRESH_TOKEN_SECRET=...
+ACCESS_TOKEN_EXPIRE_MINUTES=15
+REFRESH_TOKEN_EXPIRE_MINUTES=10080  # 7 days
 ```
 
 ---
 
-## 🔄 Token Behavior
-
-* **Access token**: short-lived (15m)
-* **Refresh token**: long-lived (7d), stored in DB
-* On login:
-
-  * Access and refresh tokens are returned
-  * Refresh token stored with metadata
-  * Login attempt logged
-  * Trusted device upserted
+## Database Tables
+- `users`
+- `refresh_tokens`
+- `trusted_devices`
+- `login_attempts`
 
 ---
 
-## 🔧 Run Locally
-
-```bash
-# Clone the repository
-git clone https://github.com/AnthoniusHendriyanto/auth-service.git
-cd auth-service
-
-# Start PostgreSQL (example using Docker)
-docker run --name porto-auth-db \
-  -e POSTGRES_PASSWORD=yourpassword \
-  -p 5432:5432 \
-  -d postgres
-
-# Apply database schema (using psql)
-psql -h localhost -U postgres -d porto_auth -f migrations/001_init.sql
-
-# Copy or configure environment variables
-cp .env.dev .env
-
-# Run the application
-go run cmd/main.go
-```
+## Upcoming Improvements
+1. Implement `/api/v1/logout` endpoint to revoke refresh tokens securely
+2. Add role support to users and enforce role-based logic (e.g. admin access)
+3. Brute-force protection per IP/user (via middleware and login attempt tracking)
+4. Admin endpoints for user/session management (e.g. list users, revoke sessions)
+5. Integration test suite and CI pipeline
+6. Deployment to GCP (Cloud Run / Cloud SQL / Secret Manager etc.)
 
 ---
 
-## 📌 Notes
+## Architecture Notes
 
-* Make sure to include header `X-Device-Fingerprint` on login
-* DTOs are placed in `internal/auth/dto` for clarity
+This project follows Clean Architecture principles adapted for Go. Folder structure is organized as:
+
+- `domain/` — Core business entities and interfaces (e.g. `User`, `UserRepository`)
+- `service/` — Application logic (use cases)
+- `repository/` — Infrastructure layer, with PostgreSQL-specific implementation
+- `handler/` — HTTP delivery layer, built using Fiber
+- `dto/` — Data Transfer Objects for request/response (kept separate to avoid leaking transport logic into domain)
+
+This separation ensures that business logic remains framework-agnostic and testable. DTOs are intentionally **not** placed inside the domain layer.
 
 ---
 
-Feel free to improve or PR more endpoints (logout, refresh, revoke, etc)!
+## License
+MIT License
