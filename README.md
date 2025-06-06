@@ -1,6 +1,6 @@
 # Porto Auth Service
 
-A robust, modular authentication service for the Porto application ecosystem, built in Go using Fiber. This service handles user registration, login, refresh token rotation, secure device tracking, and session metadata logging.
+A robust, modular authentication service for the Porto application ecosystem, built in Go using Fiber. This service handles user registration, login, refresh token rotation, secure device tracking, session metadata logging, and role-based access control.
 
 ---
 
@@ -8,9 +8,10 @@ A robust, modular authentication service for the Porto application ecosystem, bu
 
 - ✅ JWT-based authentication (access + refresh tokens)
 - 🔁 Refresh token rotation with metadata validation
+- 👤 Role-based access control (admin, user via `roles` table)
 - 🧠 Trusted device tracking and upsert logic
 - 🕵️‍♂️ Login attempt logging
-- 🔐 Token revocation on logout/refresh
+- 🔐 Token revocation on refresh (logout coming soon)
 - 🌍 Environment-based config via Viper
 - 🗃️ PostgreSQL database using `pgx`
 - 🧪 Test-driven development (TDD) and Clean Architecture
@@ -20,13 +21,15 @@ A robust, modular authentication service for the Porto application ecosystem, bu
 ## API Endpoints
 
 ### `POST /api/v1/register`
-Registers a new user.
+Registers a new user with role `user`.
 
 ### `POST /api/v1/login`
 Authenticates a user and returns access & refresh tokens.
+- Access token includes `user_id`, `email`, and `role`
 
 ### `POST /api/v1/refresh`
-Rotates the refresh token (revokes old, issues new tokens) after validating metadata.
+Rotates the refresh token after validating metadata.
+- Re-fetches user role for new access token
 
 ---
 
@@ -34,15 +37,16 @@ Rotates the refresh token (revokes old, issues new tokens) after validating meta
 - **Language:** Go
 - **Framework:** Fiber
 - **Database:** PostgreSQL (accessed via `pgx`)
-- **Migration Tool:** Manual SQL (no Atlas/golang-migrate)
+- **Migration Tool:** Manual SQL
 - **Config:** Viper
 
 ---
 
 ## Security Features
 - Device fingerprint, IP address, and user agent tracking
-- Enforced refresh token expiry and limit (e.g. max 5 active tokens per user)
-- Refresh token revocation & reissuance with fingerprint match
+- Enforced refresh token expiry and active token limit
+- Role-based access control using `roles` table (`user`, `admin`)
+- Refresh token revocation and re-issuance with fingerprint match
 
 ---
 
@@ -59,8 +63,9 @@ REFRESH_TOKEN_EXPIRE_MINUTES=10080  # 7 days
 ---
 
 ## Database Tables
-- `users`
-- `refresh_tokens`
+- `users` – includes `role_id` (FK to `roles`)
+- `roles` – defines available roles like `user`, `admin`
+- `refresh_tokens` – tracks device metadata + token state
 - `trusted_devices`
 - `login_attempts`
 
@@ -68,7 +73,7 @@ REFRESH_TOKEN_EXPIRE_MINUTES=10080  # 7 days
 
 ## Upcoming Improvements
 1. Implement `/api/v1/logout` endpoint to revoke refresh tokens securely
-2. Add role support to users and enforce role-based logic (e.g. admin access)
+2. Add `RequireRole()` middleware for protected admin routes
 3. Brute-force protection per IP/user (via middleware and login attempt tracking)
 4. Admin endpoints for user/session management (e.g. list users, revoke sessions)
 5. Integration test suite and CI pipeline

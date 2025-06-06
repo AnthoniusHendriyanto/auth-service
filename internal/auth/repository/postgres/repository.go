@@ -20,20 +20,59 @@ func NewPostgresUserRepository(db *pgxpool.Pool) *PostgresRepository {
 
 func (r *PostgresRepository) GetByEmail(email string) (*domain.User, error) {
 	query := `
-		SELECT id, email, password_hash, created_at, updated_at
-		FROM users
-		WHERE email = $1
+		SELECT u.id, u.email, u.password_hash, u.role_id, r.name as role_name, u.created_at, u.updated_at
+		FROM users u
+		JOIN roles r ON u.role_id = r.id
+		WHERE u.email = $1
 		LIMIT 1;
 	`
 	row := r.db.QueryRow(context.Background(), query, email)
 
 	var user domain.User
-	err := row.Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
+	err := row.Scan(
+		&user.ID,
+		&user.Email,
+		&user.PasswordHash,
+		&user.RoleID,
+		&user.RoleName,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get user by email: %w", err)
+	}
+
+	return &user, nil
+}
+
+func (r *PostgresRepository) GetByIDWithRole(userID string) (*domain.User, error) {
+	query := `
+		SELECT u.id, u.email, u.password_hash, u.role_id, r.name AS role_name, u.created_at, u.updated_at
+		FROM users u
+		JOIN roles r ON u.role_id = r.id
+		WHERE u.id = $1
+		LIMIT 1;
+	`
+	row := r.db.QueryRow(context.Background(), query, userID)
+
+	var user domain.User
+	err := row.Scan(
+		&user.ID,
+		&user.Email,
+		&user.PasswordHash,
+		&user.RoleID,
+		&user.RoleName,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get user by ID with role: %w", err)
 	}
 
 	return &user, nil

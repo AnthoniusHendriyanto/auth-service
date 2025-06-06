@@ -46,6 +46,7 @@ func (s *UserService) Register(input dto.RegisterInput) (*domain.User, error) {
 		ID:           uuid.New().String(),
 		Email:        input.Email,
 		PasswordHash: string(hashedPassword),
+		RoleID:       1, // Default User Role, Later we can change
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
@@ -69,7 +70,7 @@ func (s *UserService) Login(input dto.LoginInput) (*dto.TokenResponse, error) {
 		return nil, errors.New("invalid credentials")
 	}
 
-	accessToken, refreshToken, _, err := s.tokenService.Generate(user.ID, user.Email)
+	accessToken, refreshToken, _, err := s.tokenService.Generate(user.ID, user.Email, user.RoleName)
 	if err != nil {
 		return nil, err
 	}
@@ -146,8 +147,13 @@ func (s *UserService) Refresh(input dto.RefreshInput) (*dto.TokenResponse, error
 		}
 	}
 
-	// Step 4: Generate new access and refresh token pair
-	accessToken, newRefreshToken, expiresAt, err := s.tokenService.Generate(token.UserID, "")
+	// Step 4: Re-fetch user (with role info) to embed role into access token
+	user, err := s.repo.GetByIDWithRole(token.UserID)
+	if err != nil || user == nil {
+		return nil, fmt.Errorf("user not found for token refresh")
+	}
+
+	accessToken, newRefreshToken, expiresAt, err := s.tokenService.Generate(user.ID, user.Email, user.RoleName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate new tokens: %w", err)
 	}

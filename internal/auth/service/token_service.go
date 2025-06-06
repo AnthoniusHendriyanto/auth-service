@@ -16,6 +16,7 @@ type TokenService struct {
 type JWTCustomClaims struct {
 	UserID string `json:"user_id"`
 	Email  string `json:"email"`
+	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -28,12 +29,13 @@ func NewTokenService(accessSecret, refreshSecret string, accessMinutes, refreshM
 	}
 }
 
-func (ts *TokenService) Generate(userID, email string) (string, string, time.Time, error) {
+func (ts *TokenService) Generate(userID, email, role string) (string, string, time.Time, error) {
 	now := time.Now()
 
 	accessClaims := JWTCustomClaims{
 		UserID: userID,
 		Email:  email,
+		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(ts.AccessTokenExpiry)),
 			IssuedAt:  jwt.NewNumericDate(now),

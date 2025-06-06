@@ -6,6 +6,8 @@ type User struct {
 	ID           string
 	Email        string
 	PasswordHash string
+	RoleID       int
+	RoleName     string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }

@@ -61,3 +61,16 @@ CREATE INDEX idx_login_attempts_email_time ON login_attempts(email, attempt_time
 -- make sure trusted_devices table has a unique constraint
 ALTER TABLE trusted_devices
 ADD CONSTRAINT unique_user_device UNIQUE (user_id, device_fingerprint);
+
+CREATE TABLE roles (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL
+);
+
+-- Seed basic roles
+INSERT INTO roles (name) VALUES ('user'), ('admin');
+
+-- Update users table to use role_id
+ALTER TABLE users
+ADD COLUMN role_id INTEGER NOT NULL DEFAULT 1,
+ADD CONSTRAINT fk_role FOREIGN KEY (role_id) REFERENCES roles(id);
