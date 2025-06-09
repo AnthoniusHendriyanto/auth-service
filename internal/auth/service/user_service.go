@@ -3,7 +3,6 @@ package service
 import (
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/AnthoniusHendriyanto/auth-service/internal/auth/domain"
@@ -155,17 +154,21 @@ func (s *UserService) Refresh(input dto.RefreshInput) (*dto.TokenResponse, error
 		return nil, fmt.Errorf("failed to store new refresh token: %w", err)
 	}
 
-	activeCount, err := s.repo.GetActiveCountByUserID(user.ID)
-	if err != nil {
-		log.Printf("warn: failed to count active tokens: %v", err)
-	} else if activeCount > s.maxActiveTokensPerUser {
-		if err := s.repo.DeleteOldestByUserID(user.ID); err != nil {
-			log.Printf("warn: failed to delete oldest refresh token: %v", err)
-		}
-	}
-
 	return &dto.TokenResponse{
 		AccessToken:  accessToken,
 		RefreshToken: newRefreshToken,
 	}, nil
+}
+
+func (s *UserService) Logout(refreshToken string) error {
+	token, err := s.repo.GetRefreshToken(refreshToken)
+	if err != nil || token == nil {
+		return errors.New("refresh token not found")
+	}
+
+	if token.Revoked {
+		return errors.New("refresh token already revoked")
+	}
+
+	return s.repo.RevokeRefreshToken(token.ID)
 }
