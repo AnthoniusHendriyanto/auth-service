@@ -93,17 +93,12 @@ func (s *UserService) Login(input dto.LoginInput) (*dto.TokenResponse, error) {
 		return nil, err
 	}
 
-	if err := s.repo.UpsertTrustedDevice(user.ID, input.Fingerprint, input.UserAgent, input.IPAddress); err != nil {
+	if err = s.repo.UpsertTrustedDevice(user.ID, input.Fingerprint, input.UserAgent, input.IPAddress); err != nil {
 		return nil, err
 	}
 
-	if err := s.repo.RecordLoginAttempt(input.Email, input.IPAddress, true); err != nil {
+	if err = s.repo.RecordLoginAttempt(input.Email, input.IPAddress, true); err != nil {
 		return nil, err
-	}
-
-	// Delete oldest if token count exceeds limit
-	if err := s.repo.DeleteOldestByUserID(user.ID); err != nil {
-		log.Printf("warn: failed to delete oldest refresh token for user %s: %v", user.ID, err)
 	}
 
 	return &dto.TokenResponse{
@@ -113,7 +108,6 @@ func (s *UserService) Login(input dto.LoginInput) (*dto.TokenResponse, error) {
 }
 
 func (s *UserService) Refresh(input dto.RefreshInput) (*dto.TokenResponse, error) {
-	// Step 1: Validate existing refresh token
 	token, err := s.repo.GetRefreshToken(input.RefreshToken)
 	if err != nil || token == nil {
 		return nil, errors.New("refresh token not found")
@@ -131,23 +125,10 @@ func (s *UserService) Refresh(input dto.RefreshInput) (*dto.TokenResponse, error
 		return nil, errors.New("refresh token expired")
 	}
 
-	// Step 2: Revoke the old token
 	if err := s.repo.RevokeRefreshToken(token.ID); err != nil {
 		return nil, fmt.Errorf("failed to revoke token: %w", err)
 	}
 
-	// Step 3: Check and delete if too many active tokens
-	activeCount, err := s.repo.GetActiveCountByUserID(token.UserID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to count active tokens: %w", err)
-	}
-	if activeCount >= s.maxActiveTokensPerUser {
-		if err := s.repo.DeleteOldestByUserID(token.UserID); err != nil {
-			log.Printf("warn: failed to delete oldest token for user %s: %v", token.UserID, err)
-		}
-	}
-
-	// Step 4: Re-fetch user (with role info) to embed role into access token
 	user, err := s.repo.GetByIDWithRole(token.UserID)
 	if err != nil || user == nil {
 		return nil, fmt.Errorf("user not found for token refresh")
@@ -158,7 +139,6 @@ func (s *UserService) Refresh(input dto.RefreshInput) (*dto.TokenResponse, error
 		return nil, fmt.Errorf("failed to generate new tokens: %w", err)
 	}
 
-	// Step 5: Store the new refresh token
 	newToken := &domain.RefreshToken{
 		ID:                uuid.NewString(),
 		UserID:            token.UserID,
@@ -170,11 +150,20 @@ func (s *UserService) Refresh(input dto.RefreshInput) (*dto.TokenResponse, error
 		CreatedAt:         time.Now(),
 		Revoked:           false,
 	}
+
 	if err := s.repo.StoreRefreshToken(newToken); err != nil {
 		return nil, fmt.Errorf("failed to store new refresh token: %w", err)
 	}
 
-	// Step 6: Return token pair
+	activeCount, err := s.repo.GetActiveCountByUserID(user.ID)
+	if err != nil {
+		log.Printf("warn: failed to count active tokens: %v", err)
+	} else if activeCount > s.maxActiveTokensPerUser {
+		if err := s.repo.DeleteOldestByUserID(user.ID); err != nil {
+			log.Printf("warn: failed to delete oldest refresh token: %v", err)
+		}
+	}
+
 	return &dto.TokenResponse{
 		AccessToken:  accessToken,
 		RefreshToken: newRefreshToken,
