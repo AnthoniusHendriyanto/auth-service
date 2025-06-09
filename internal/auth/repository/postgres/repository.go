@@ -186,3 +186,9 @@ func (r *PostgresRepository) DeleteOldestByUserID(userID string) error {
 	}
 	return nil
 }
+
+func (r *PostgresRepository) RevokeAllRefreshTokensByUserID(userID string) error {
+	query := `UPDATE refresh_tokens SET revoked = TRUE WHERE user_id = $1 AND revoked = FALSE`
+	_, err := r.db.Exec(context.Background(), query, userID)
+	return err
+}

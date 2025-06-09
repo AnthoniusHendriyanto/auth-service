@@ -11,4 +11,5 @@ type UserRepository interface {
 	RevokeRefreshToken(id string) error
 	GetActiveCountByUserID(userID string) (int, error)
 	DeleteOldestByUserID(userID string) error
+	RevokeAllRefreshTokensByUserID(userID string) error
 }

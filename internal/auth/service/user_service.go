@@ -172,3 +172,7 @@ func (s *UserService) Logout(refreshToken string) error {
 
 	return s.repo.RevokeRefreshToken(token.ID)
 }
+
+func (s *UserService) ForceLogoutByUserID(userID string) error {
+	return s.repo.RevokeAllRefreshTokensByUserID(userID)
+}
