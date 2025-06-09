@@ -75,3 +75,23 @@ func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(tokens)
 }
+
+func (h *AuthHandler) Logout(c *fiber.Ctx) error {
+	var input dto.LogoutInput
+	if err := c.BodyParser(&input); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid input",
+		})
+	}
+
+	err := h.userService.Logout(input.RefreshToken)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "logged out successfully",
+	})
+}
