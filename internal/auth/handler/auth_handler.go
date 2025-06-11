@@ -1,8 +1,11 @@
 package handler
 
 import (
+	"errors"
+
 	"github.com/AnthoniusHendriyanto/auth-service/internal/auth/dto"
 	"github.com/AnthoniusHendriyanto/auth-service/internal/auth/service"
+	autherror "github.com/AnthoniusHendriyanto/auth-service/internal/errors"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -70,6 +73,9 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	tokenPair, err := h.userService.Login(input)
 	if err != nil {
+		if errors.Is(err, autherror.ErrTooManyLoginAttempts) {
+			return sendError(c, fiber.StatusTooManyRequests, err)
+		}
 		return sendError(c, fiber.StatusUnauthorized, err)
 	}
 
