@@ -1,27 +1,29 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
+	"github.com/AnthoniusHendriyanto/auth-service/config"
 	"github.com/AnthoniusHendriyanto/auth-service/internal/auth/domain"
 	"github.com/AnthoniusHendriyanto/auth-service/internal/auth/dto"
+	autherror "github.com/AnthoniusHendriyanto/auth-service/internal/errors"
+	authconstant "github.com/AnthoniusHendriyanto/auth-service/pkg/constant"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService struct {
-	repo                   domain.UserRepository
-	tokenService           *TokenService
-	maxActiveTokensPerUser int
+	repo         domain.UserRepository
+	tokenService *TokenService
+	cfg          *config.Config
 }
 
-func NewUserService(repo domain.UserRepository, tokenService *TokenService, maxTokens int) *UserService {
+func NewUserService(repo domain.UserRepository, tokenService *TokenService, cfg *config.Config) *UserService {
 	return &UserService{
-		repo:                   repo,
-		tokenService:           tokenService,
-		maxActiveTokensPerUser: maxTokens,
+		repo:         repo,
+		tokenService: tokenService,
+		cfg:          cfg,
 	}
 }
 
@@ -31,7 +33,7 @@ func (s *UserService) Register(input dto.RegisterInput) (*domain.User, error) {
 		return nil, err
 	}
 	if existingUser != nil {
-		return nil, errors.New("email already in use")
+		return nil, autherror.ErrEmailAlreadyInUse
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
@@ -45,7 +47,7 @@ func (s *UserService) Register(input dto.RegisterInput) (*domain.User, error) {
 		ID:           uuid.New().String(),
 		Email:        input.Email,
 		PasswordHash: string(hashedPassword),
-		RoleID:       1, // Default User Role, Later we can change
+		RoleID:       authconstant.DefaultUserRoleID, // Default User Role, Later we can change
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
@@ -59,6 +61,17 @@ func (s *UserService) Register(input dto.RegisterInput) (*domain.User, error) {
 }
 
 func (s *UserService) Login(input dto.LoginInput) (*dto.TokenResponse, error) {
+	// 1. Brute-force check
+	failedAttempts, err := s.repo.CountRecentFailedAttempts(input.Email, input.IPAddress, s.cfg.MaxActiveRefreshTokens)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check login attempts: %w", err)
+	}
+
+	if failedAttempts >= s.cfg.LoginMaxAttempts {
+		return nil, autherror.ErrTooManyLoginAttempts
+	}
+
+	// 2. Check user credentials
 	user, err := s.repo.GetByEmail(input.Email)
 	if err != nil {
 		return nil, err
@@ -66,9 +79,10 @@ func (s *UserService) Login(input dto.LoginInput) (*dto.TokenResponse, error) {
 
 	if user == nil || bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(input.Password)) != nil {
 		_ = s.repo.RecordLoginAttempt(input.Email, input.IPAddress, false)
-		return nil, errors.New("invalid credentials")
+		return nil, autherror.ErrInvalidCredentials
 	}
 
+	// 3. Generate tokens
 	accessToken, refreshToken, _, err := s.tokenService.Generate(user.ID, user.Email, user.RoleName)
 	if err != nil {
 		return nil, err
@@ -103,25 +117,27 @@ func (s *UserService) Login(input dto.LoginInput) (*dto.TokenResponse, error) {
 	return &dto.TokenResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
+		TokenType:    authconstant.DefaultTokenType,
+		ExpiresIn:    int(s.tokenService.AccessTokenExpiry.Seconds()),
 	}, nil
 }
 
 func (s *UserService) Refresh(input dto.RefreshInput) (*dto.TokenResponse, error) {
 	token, err := s.repo.GetRefreshToken(input.RefreshToken)
 	if err != nil || token == nil {
-		return nil, errors.New("refresh token not found")
+		return nil, autherror.ErrRefreshTokenNotFound
 	}
 
 	if token.Revoked {
-		return nil, errors.New("refresh token revoked")
+		return nil, autherror.ErrRefreshTokenRevoked
 	}
 
 	if token.DeviceFingerprint != input.Fingerprint {
-		return nil, errors.New("device fingerprint mismatch")
+		return nil, autherror.ErrDeviceFingerprintMismatch
 	}
 
 	if time.Now().After(token.ExpiresAt) {
-		return nil, errors.New("refresh token expired")
+		return nil, autherror.ErrRefreshTokenExpired
 	}
 
 	if err := s.repo.RevokeRefreshToken(token.ID); err != nil {
@@ -157,17 +173,19 @@ func (s *UserService) Refresh(input dto.RefreshInput) (*dto.TokenResponse, error
 	return &dto.TokenResponse{
 		AccessToken:  accessToken,
 		RefreshToken: newRefreshToken,
+		TokenType:    authconstant.DefaultTokenType,
+		ExpiresIn:    int(s.tokenService.AccessTokenExpiry.Seconds()),
 	}, nil
 }
 
 func (s *UserService) Logout(refreshToken string) error {
 	token, err := s.repo.GetRefreshToken(refreshToken)
 	if err != nil || token == nil {
-		return errors.New("refresh token not found")
+		return autherror.ErrRefreshTokenNotFound
 	}
 
 	if token.Revoked {
-		return errors.New("refresh token already revoked")
+		return autherror.ErrRefreshTokenRevoked
 	}
 
 	return s.repo.RevokeRefreshToken(token.ID)

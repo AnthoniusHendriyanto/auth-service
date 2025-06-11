@@ -15,7 +15,7 @@ func main() {
 	dbPool := db.NewPostgresPool(cfg.DBURL)
 	userRepo := repo.NewPostgresUserRepository(dbPool)
 	tokenService := service.NewTokenService(cfg.AccessTokenSecret, cfg.RefreshTokenSecret, cfg.AccessExpiryMin, cfg.RefreshExpiryMin)
-	userService := service.NewUserService(userRepo, tokenService, cfg.MaxActiveRefreshTokens)
+	userService := service.NewUserService(userRepo, tokenService, cfg)
 	authHandler := handler.NewAuthHandler(userService)
 
 	app := fiber.New()

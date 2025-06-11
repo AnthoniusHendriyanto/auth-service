@@ -192,3 +192,21 @@ func (r *PostgresRepository) RevokeAllRefreshTokensByUserID(userID string) error
 	_, err := r.db.Exec(context.Background(), query, userID)
 	return err
 }
+
+func (r *PostgresRepository) CountRecentFailedAttempts(email, ip string, withinMinutes int) (int, error) {
+	query := fmt.Sprintf(`
+		SELECT COUNT(*)
+		FROM login_attempts
+		WHERE email = $1
+		  AND ip_address = $2
+		  AND successful = FALSE
+		  AND attempt_time > NOW() - INTERVAL '%d minutes'
+	`, withinMinutes)
+
+	var count int
+	err := r.db.QueryRow(context.Background(), query, email, ip).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count recent failed attempts: %w", err)
+	}
+	return count, nil
+}

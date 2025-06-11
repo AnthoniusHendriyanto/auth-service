@@ -12,4 +12,5 @@ type UserRepository interface {
 	GetActiveCountByUserID(userID string) (int, error)
 	DeleteOldestByUserID(userID string) error
 	RevokeAllRefreshTokensByUserID(userID string) error
+	CountRecentFailedAttempts(email, ip string, withinMinutes int) (int, error)
 }
