@@ -17,6 +17,8 @@ type Config struct {
 	AccessExpiryMin        int
 	RefreshExpiryMin       int
 	MaxActiveRefreshTokens int
+	LoginMaxAttempts       int
+	LoginWindowMinutes     int
 }
 
 func Load() *Config {
@@ -48,6 +50,8 @@ func Load() *Config {
 	v.SetDefault("ACCESS_TOKEN_EXPIRY", 15)
 	v.SetDefault("REFRESH_TOKEN_EXPIRY", 10080)
 	v.SetDefault("MAX_ACTIVE_REFRESH_TOKENS", 5)
+	v.SetDefault("LOGIN_MAX_ATTEMPTS", 5)
+	v.SetDefault("LOGIN_WINDOW_MINUTES", 15)
 
 	// Validate required keys
 	requiredKeys := []string{
@@ -71,6 +75,8 @@ func Load() *Config {
 		AccessExpiryMin:        v.GetInt("ACCESS_TOKEN_EXPIRY"),
 		RefreshExpiryMin:       v.GetInt("REFRESH_TOKEN_EXPIRY"),
 		MaxActiveRefreshTokens: v.GetInt("MAX_ACTIVE_REFRESH_TOKENS"),
+		LoginMaxAttempts:       v.GetInt("LOGIN_MAX_ATTEMPTS"),
+		LoginWindowMinutes:     v.GetInt("LOGIN_WINDOW_MINUTES"),
 	}
 }
 
