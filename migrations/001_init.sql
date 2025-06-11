@@ -74,3 +74,6 @@ INSERT INTO roles (name) VALUES ('user'), ('admin');
 ALTER TABLE users
 ADD COLUMN role_id INTEGER NOT NULL DEFAULT 1,
 ADD CONSTRAINT fk_role FOREIGN KEY (role_id) REFERENCES roles(id);
+
+CREATE INDEX idx_login_attempts_email_ip_time_success
+ON login_attempts (email, ip_address, attempt_time, successful);
