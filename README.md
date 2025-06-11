@@ -11,25 +11,35 @@ A robust, modular authentication service for the Porto application ecosystem, bu
 - 👤 Role-based access control (admin, user via `roles` table)
 - 🧠 Trusted device tracking and upsert logic
 - 🕵️‍♂️ Login attempt logging
-- 🔐 Token revocation on refresh (logout coming soon)
+- 🔐 Token revocation on refresh, logout, and force logout
 - 🌍 Environment-based config via Viper
 - 🗃️ PostgreSQL database using `pgx`
-- 🧪 Test-driven development (TDD) and Clean Architecture
+- 🧪 Clean Architecture
 
 ---
 
 ## API Endpoints
 
 ### `POST /api/v1/register`
-Registers a new user with role `user`.
+Registers a new user with role `user`. Returns user ID and email.
 
 ### `POST /api/v1/login`
 Authenticates a user and returns access & refresh tokens.
 - Access token includes `user_id`, `email`, and `role`
+- Automatically logs login attempt and upserts trusted device
 
 ### `POST /api/v1/refresh`
 Rotates the refresh token after validating metadata.
-- Re-fetches user role for new access token
+- Validates fingerprint, IP, and expiry
+- Revokes old token and issues new pair
+- Cleans up old tokens if exceeding active limit
+
+### `DELETE /api/v1/session`
+Revokes the current refresh token. Useful for user-initiated logout from a device/session.
+
+### `DELETE /api/v1/user/:id/sessions`
+Admin-only endpoint to revoke **all refresh tokens** for a given user.
+- Used to log out user from all devices
 
 ---
 
@@ -47,11 +57,12 @@ Rotates the refresh token after validating metadata.
 - Enforced refresh token expiry and active token limit
 - Role-based access control using `roles` table (`user`, `admin`)
 - Refresh token revocation and re-issuance with fingerprint match
+- Full session wipe via force logout
 
 ---
 
 ## Environment Variables
-```
+```env
 PORT=8080
 DB_URL=postgres://user:pass@localhost:5432/porto_auth
 ACCESS_TOKEN_SECRET=...
@@ -72,12 +83,12 @@ REFRESH_TOKEN_EXPIRE_MINUTES=10080  # 7 days
 ---
 
 ## Upcoming Improvements
-1. Implement `/api/v1/logout` endpoint to revoke refresh tokens securely
-2. Add `RequireRole()` middleware for protected admin routes
-3. Brute-force protection per IP/user (via middleware and login attempt tracking)
-4. Admin endpoints for user/session management (e.g. list users, revoke sessions)
-5. Integration test suite and CI pipeline
-6. Deployment to GCP (Cloud Run / Cloud SQL / Secret Manager etc.)
+1. Add `RequireRole()` middleware for protected admin routes
+2. Brute-force protection per IP/user (via middleware and login attempt tracking)
+3. Admin endpoints for user/session management (e.g. list users, revoke sessions)
+4. Integration test suite and CI pipeline
+5. Deployment to GCP (Cloud Run / Cloud SQL / Secret Manager etc.)
+6. Cloud Scheduler for expired token cleanup
 
 ---
 
