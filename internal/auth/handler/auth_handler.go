@@ -116,7 +116,7 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) ForceLogout(c *fiber.Ctx) error {
-	userID := c.Params("userID")
+	userID := c.Params("id")
 	if userID == "" {
 		return sendError(c, fiber.StatusBadRequest, fiber.NewError(fiber.StatusBadRequest, "userID is required"))
 	}
