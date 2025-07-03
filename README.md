@@ -1,6 +1,7 @@
 # Porto Auth Service
 [![codecov](https://codecov.io/github/AnthoniusHendriyanto/auth-service/graph/badge.svg?token=VV3CFWZG5G)](https://codecov.io/github/AnthoniusHendriyanto/auth-service)
 [![Go Report Card](https://goreportcard.com/badge/github.com/AnthoniusHendriyanto/auth-service)](https://goreportcard.com/report/github.com/AnthoniusHendriyanto/auth-service)
+
 A robust, modular authentication service for the Porto application ecosystem, built in Go using Fiber. This service handles user registration, login, refresh token rotation, secure device tracking, session metadata logging, and role-based access control.
 
 ---
