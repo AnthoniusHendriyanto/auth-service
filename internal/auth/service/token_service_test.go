@@ -46,6 +46,7 @@ func TestNewTokenService(t *testing.T) {
 	}
 }
 
+//nolint:funlen
 func TestTokenService_Generate(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -119,9 +120,10 @@ func TestTokenService_Generate(t *testing.T) {
 
 				// Verify access token claims
 				accessClaims := &JWTCustomClaims{}
-				accessTokenParsed, err := jwt.ParseWithClaims(accessToken, accessClaims, func(token *jwt.Token) (interface{}, error) {
-					return []byte(tt.accessSecret), nil
-				})
+				accessTokenParsed, err := jwt.ParseWithClaims(accessToken, accessClaims,
+					func(token *jwt.Token) (interface{}, error) {
+						return []byte(tt.accessSecret), nil
+					})
 				require.NoError(t, err)
 				assert.True(t, accessTokenParsed.Valid)
 				assert.Equal(t, tt.userID, accessClaims.UserID)
@@ -130,9 +132,10 @@ func TestTokenService_Generate(t *testing.T) {
 
 				// Verify refresh token claims
 				refreshClaims := &JWTCustomClaims{}
-				refreshTokenParsed, err := jwt.ParseWithClaims(refreshToken, refreshClaims, func(token *jwt.Token) (interface{}, error) {
-					return []byte(tt.refreshSecret), nil
-				})
+				refreshTokenParsed, err := jwt.ParseWithClaims(refreshToken, refreshClaims,
+					func(token *jwt.Token) (interface{}, error) {
+						return []byte(tt.refreshSecret), nil
+					})
 				require.NoError(t, err)
 				assert.True(t, refreshTokenParsed.Valid)
 				assert.Equal(t, tt.userID, refreshClaims.UserID)

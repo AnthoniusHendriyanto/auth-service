@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -46,6 +47,7 @@ func createTempConfigFile(t *testing.T, filename, content string) {
 	require.NoError(t, err)
 }
 
+//nolint:funlen
 func TestLoad(t *testing.T) {
 	// Common required variables for most tests
 	setRequiredEnvVars := func(t *testing.T) {
@@ -165,6 +167,7 @@ func TestLoad_FatalOnMissingKeys(t *testing.T) {
 			// This is the sub-process that will actually run the code and crash.
 			if os.Getenv("GO_TEST_FATAL") == "1" {
 				Load()
+
 				return // Should not be reached
 			}
 
@@ -184,12 +187,14 @@ func TestLoad_FatalOnMissingKeys(t *testing.T) {
 			output, err := cmd.CombinedOutput()
 
 			// Check that the process exited as expected.
-			exitErr, ok := err.(*exec.ExitError)
+			var exitErr *exec.ExitError
+			ok := errors.As(err, &exitErr)
 			require.True(t, ok, "Expected command to exit with an error")
 			assert.False(t, exitErr.Success(), "Expected command to fail")
 
 			// Check that the output contains our expected fatal error message.
-			assert.True(t, strings.Contains(string(output), expectedErr), "Expected output to contain '%s', got '%s'", expectedErr, string(output))
+			assert.True(t, strings.Contains(string(output), expectedErr),
+				"Expected output to contain '%s', got '%s'", expectedErr, string(output))
 		})
 	}
 }
