@@ -79,6 +79,7 @@ func (s *UserService) Login(input dto.LoginInput) (*dto.TokenResponse, error) {
 
 	if user == nil || bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(input.Password)) != nil {
 		_ = s.repo.RecordLoginAttempt(input.Email, input.IPAddress, false)
+
 		return nil, autherror.ErrInvalidCredentials
 	}
 
@@ -123,6 +124,36 @@ func (s *UserService) Login(input dto.LoginInput) (*dto.TokenResponse, error) {
 }
 
 func (s *UserService) Refresh(input dto.RefreshInput) (*dto.TokenResponse, error) {
+	token, err := s.validateRefreshToken(input)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.RevokeRefreshToken(token.ID); err != nil {
+		return nil, fmt.Errorf("failed to revoke token: %w", err)
+	}
+
+	return s.generateAndStoreNewTokens(token, input)
+}
+
+func (s *UserService) Logout(refreshToken string) error {
+	token, err := s.repo.GetRefreshToken(refreshToken)
+	if err != nil || token == nil {
+		return autherror.ErrRefreshTokenNotFound
+	}
+
+	if token.Revoked {
+		return autherror.ErrRefreshTokenRevoked
+	}
+
+	return s.repo.RevokeRefreshToken(token.ID)
+}
+
+func (s *UserService) ForceLogoutByUserID(userID string) error {
+	return s.repo.RevokeAllRefreshTokensByUserID(userID)
+}
+
+func (s *UserService) validateRefreshToken(input dto.RefreshInput) (*domain.RefreshToken, error) {
 	token, err := s.repo.GetRefreshToken(input.RefreshToken)
 	if err != nil || token == nil {
 		return nil, autherror.ErrRefreshTokenNotFound
@@ -140,11 +171,12 @@ func (s *UserService) Refresh(input dto.RefreshInput) (*dto.TokenResponse, error
 		return nil, autherror.ErrRefreshTokenExpired
 	}
 
-	if err := s.repo.RevokeRefreshToken(token.ID); err != nil {
-		return nil, fmt.Errorf("failed to revoke token: %w", err)
-	}
+	return token, nil
+}
 
-	user, err := s.repo.GetByIDWithRole(token.UserID)
+func (s *UserService) generateAndStoreNewTokens(oldToken *domain.RefreshToken,
+	input dto.RefreshInput) (*dto.TokenResponse, error) {
+	user, err := s.repo.GetByIDWithRole(oldToken.UserID)
 	if err != nil || user == nil {
 		return nil, fmt.Errorf("user not found for token refresh")
 	}
@@ -156,7 +188,7 @@ func (s *UserService) Refresh(input dto.RefreshInput) (*dto.TokenResponse, error
 
 	newToken := &domain.RefreshToken{
 		ID:                uuid.NewString(),
-		UserID:            token.UserID,
+		UserID:            oldToken.UserID,
 		Token:             newRefreshToken,
 		DeviceFingerprint: input.Fingerprint,
 		IPAddress:         input.IPAddress,
@@ -176,21 +208,4 @@ func (s *UserService) Refresh(input dto.RefreshInput) (*dto.TokenResponse, error
 		TokenType:    authconstant.DefaultTokenType,
 		ExpiresIn:    int(s.tokenService.AccessTokenExpiry.Seconds()),
 	}, nil
-}
-
-func (s *UserService) Logout(refreshToken string) error {
-	token, err := s.repo.GetRefreshToken(refreshToken)
-	if err != nil || token == nil {
-		return autherror.ErrRefreshTokenNotFound
-	}
-
-	if token.Revoked {
-		return autherror.ErrRefreshTokenRevoked
-	}
-
-	return s.repo.RevokeRefreshToken(token.ID)
-}
-
-func (s *UserService) ForceLogoutByUserID(userID string) error {
-	return s.repo.RevokeAllRefreshTokensByUserID(userID)
 }

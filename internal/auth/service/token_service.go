@@ -14,10 +14,10 @@ type TokenService struct {
 }
 
 type JWTCustomClaims struct {
+	jwt.RegisteredClaims
 	UserID string `json:"user_id"`
 	Email  string `json:"email"`
 	Role   string `json:"role"`
-	jwt.RegisteredClaims
 }
 
 func NewTokenService(accessSecret, refreshSecret string, accessMinutes, refreshMinutes int) *TokenService {
@@ -56,7 +56,8 @@ func (ts *TokenService) Generate(userID, email, role string) (string, string, ti
 		return "", "", time.Time{}, err
 	}
 
-	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(ts.RefreshTokenSecret))
+	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256,
+		refreshClaims).SignedString([]byte(ts.RefreshTokenSecret))
 	if err != nil {
 		return "", "", time.Time{}, err
 	}

@@ -10,15 +10,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type PostgresRepository struct {
+type Repository struct {
 	db *pgxpool.Pool
 }
 
-func NewPostgresUserRepository(db *pgxpool.Pool) *PostgresRepository {
-	return &PostgresRepository{db: db}
+func NewPostgresRepository(db *pgxpool.Pool) *Repository {
+	return &Repository{db: db}
 }
 
-func (r *PostgresRepository) GetByEmail(email string) (*domain.User, error) {
+func (r *Repository) GetByEmail(email string) (*domain.User, error) {
 	query := `
 		SELECT u.id, u.email, u.password_hash, u.role_id, r.name as role_name, u.created_at, u.updated_at
 		FROM users u
@@ -42,13 +42,14 @@ func (r *PostgresRepository) GetByEmail(email string) (*domain.User, error) {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
+
 		return nil, fmt.Errorf("failed to get user by email: %w", err)
 	}
 
 	return &user, nil
 }
 
-func (r *PostgresRepository) GetByIDWithRole(userID string) (*domain.User, error) {
+func (r *Repository) GetByIDWithRole(userID string) (*domain.User, error) {
 	query := `
 		SELECT u.id, u.email, u.password_hash, u.role_id, r.name AS role_name, u.created_at, u.updated_at
 		FROM users u
@@ -72,13 +73,14 @@ func (r *PostgresRepository) GetByIDWithRole(userID string) (*domain.User, error
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
+
 		return nil, fmt.Errorf("failed to get user by ID with role: %w", err)
 	}
 
 	return &user, nil
 }
 
-func (r *PostgresRepository) Create(user *domain.User) error {
+func (r *Repository) Create(user *domain.User) error {
 	_, err := r.db.Exec(context.Background(), `
         INSERT INTO users (id, email, password_hash, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5)
@@ -87,24 +89,27 @@ func (r *PostgresRepository) Create(user *domain.User) error {
 	return err
 }
 
-func (r *PostgresRepository) StoreRefreshToken(rt *domain.RefreshToken) error {
-	query := `INSERT INTO refresh_tokens (id, user_id, token, device_fingerprint, ip_address, user_agent, expires_at, created_at, revoked)
+func (r *Repository) StoreRefreshToken(rt *domain.RefreshToken) error {
+	query := `INSERT INTO refresh_tokens (id, user_id, token, device_fingerprint, ip_address, user_agent, 
+                            expires_at, created_at, revoked)
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 	_, err := r.db.Exec(context.Background(), query,
 		rt.ID, rt.UserID, rt.Token, rt.DeviceFingerprint, rt.IPAddress,
 		rt.UserAgent, rt.ExpiresAt, rt.CreatedAt, rt.Revoked)
+
 	return err
 }
 
-func (r *PostgresRepository) RecordLoginAttempt(email, ip string, success bool) error {
+func (r *Repository) RecordLoginAttempt(email, ip string, success bool) error {
 	_, err := r.db.Exec(context.Background(), `
 		INSERT INTO login_attempts (id, email, ip_address, attempt_time, successful)
 		VALUES (gen_random_uuid(), $1, $2, now(), $3)
 	`, email, ip, success)
+
 	return err
 }
 
-func (r *PostgresRepository) UpsertTrustedDevice(userID, fingerprint, userAgent, ip string) error {
+func (r *Repository) UpsertTrustedDevice(userID, fingerprint, userAgent, ip string) error {
 	_, err := r.db.Exec(context.Background(), `
 		INSERT INTO trusted_devices (
 			id, user_id, device_fingerprint, user_agent, ip_address, last_seen, created_at
@@ -117,10 +122,11 @@ func (r *PostgresRepository) UpsertTrustedDevice(userID, fingerprint, userAgent,
 			ip_address = EXCLUDED.ip_address,
 			user_agent = EXCLUDED.user_agent
 	`, userID, fingerprint, userAgent, ip)
+
 	return err
 }
 
-func (r *PostgresRepository) GetRefreshToken(token string) (*domain.RefreshToken, error) {
+func (r *Repository) GetRefreshToken(token string) (*domain.RefreshToken, error) {
 	row := r.db.QueryRow(context.Background(), `
 		SELECT id, user_id, token, device_fingerprint, ip_address, user_agent, expires_at, created_at, revoked
 		FROM refresh_tokens
@@ -139,22 +145,24 @@ func (r *PostgresRepository) GetRefreshToken(token string) (*domain.RefreshToken
 		&rt.CreatedAt,
 		&rt.Revoked,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
+
 	return &rt, nil
 }
 
-func (r *PostgresRepository) RevokeRefreshToken(id string) error {
+func (r *Repository) RevokeRefreshToken(id string) error {
 	_, err := r.db.Exec(context.Background(),
 		`UPDATE refresh_tokens SET revoked = TRUE WHERE id = $1`, id)
+
 	return err
 }
 
-func (r *PostgresRepository) GetActiveCountByUserID(userID string) (int, error) {
+func (r *Repository) GetActiveCountByUserID(userID string) (int, error) {
 	query := `
 		SELECT COUNT(id)
 		FROM refresh_tokens
@@ -167,10 +175,11 @@ func (r *PostgresRepository) GetActiveCountByUserID(userID string) (int, error) 
 	if err != nil {
 		return 0, err
 	}
+
 	return count, nil
 }
 
-func (r *PostgresRepository) DeleteOldestByUserID(userID string) error {
+func (r *Repository) DeleteOldestByUserID(userID string) error {
 	query := `
 		DELETE FROM refresh_tokens
 		WHERE id = (
@@ -184,16 +193,18 @@ func (r *PostgresRepository) DeleteOldestByUserID(userID string) error {
 	if err != nil {
 		return fmt.Errorf("failed to delete oldest refresh token for user %s: %w", userID, err)
 	}
+
 	return nil
 }
 
-func (r *PostgresRepository) RevokeAllRefreshTokensByUserID(userID string) error {
+func (r *Repository) RevokeAllRefreshTokensByUserID(userID string) error {
 	query := `UPDATE refresh_tokens SET revoked = TRUE WHERE user_id = $1 AND revoked = FALSE`
 	_, err := r.db.Exec(context.Background(), query, userID)
+
 	return err
 }
 
-func (r *PostgresRepository) CountRecentFailedAttempts(email, ip string, withinMinutes int) (int, error) {
+func (r *Repository) CountRecentFailedAttempts(email, ip string, withinMinutes int) (int, error) {
 	query := fmt.Sprintf(`
 		SELECT COUNT(*)
 		FROM login_attempts
@@ -208,5 +219,6 @@ func (r *PostgresRepository) CountRecentFailedAttempts(email, ip string, withinM
 	if err != nil {
 		return 0, fmt.Errorf("failed to count recent failed attempts: %w", err)
 	}
+
 	return count, nil
 }

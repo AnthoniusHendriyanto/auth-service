@@ -8,6 +8,16 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Default configuration constants
+const (
+	DefaultPort                   = "8080"
+	DefaultAccessTokenExpiryMin   = 15
+	DefaultRefreshTokenExpiryMin  = 10080 // 7 days in minutes
+	DefaultMaxActiveRefreshTokens = 5
+	DefaultLoginMaxAttempts       = 5
+	DefaultLoginWindowMinutes     = 15
+)
+
 type Config struct {
 	Env                    string
 	Port                   string
@@ -37,6 +47,7 @@ func Load() *Config {
 	default:
 		v.SetConfigFile("config/.env.dev")
 	}
+
 	v.SetConfigType("env")
 	v.AddConfigPath(".")
 
@@ -46,12 +57,12 @@ func Load() *Config {
 	}
 
 	// Set fallback defaults
-	v.SetDefault("PORT", "8080")
-	v.SetDefault("ACCESS_TOKEN_EXPIRY", 15)
-	v.SetDefault("REFRESH_TOKEN_EXPIRY", 10080)
-	v.SetDefault("MAX_ACTIVE_REFRESH_TOKENS", 5)
-	v.SetDefault("LOGIN_MAX_ATTEMPTS", 5)
-	v.SetDefault("LOGIN_WINDOW_MINUTES", 15)
+	v.SetDefault("PORT", DefaultPort)
+	v.SetDefault("ACCESS_TOKEN_EXPIRY", DefaultAccessTokenExpiryMin)
+	v.SetDefault("REFRESH_TOKEN_EXPIRY", DefaultRefreshTokenExpiryMin)
+	v.SetDefault("MAX_ACTIVE_REFRESH_TOKENS", DefaultMaxActiveRefreshTokens)
+	v.SetDefault("LOGIN_MAX_ATTEMPTS", DefaultLoginMaxAttempts)
+	v.SetDefault("LOGIN_WINDOW_MINUTES", DefaultLoginWindowMinutes)
 
 	// Validate required keys
 	requiredKeys := []string{
@@ -85,5 +96,6 @@ func getEnv(key, fallback string) string {
 	if val == "" {
 		return fallback
 	}
+
 	return val
 }

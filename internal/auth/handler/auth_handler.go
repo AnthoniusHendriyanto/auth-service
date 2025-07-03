@@ -37,13 +37,6 @@ func sendSuccess(c *fiber.Ctx, status int, data interface{}) error {
 	})
 }
 
-func (h *AuthHandler) parseInput(c *fiber.Ctx, input interface{}) error {
-	if err := c.BodyParser(input); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid input")
-	}
-	return nil
-}
-
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	var input dto.RegisterInput
 	if err := h.parseInput(c, &input); err != nil {
@@ -76,6 +69,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		if errors.Is(err, autherror.ErrTooManyLoginAttempts) {
 			return sendError(c, fiber.StatusTooManyRequests, err)
 		}
+
 		return sendError(c, fiber.StatusUnauthorized, err)
 	}
 
@@ -128,4 +122,12 @@ func (h *AuthHandler) ForceLogout(c *fiber.Ctx) error {
 	return sendSuccess(c, fiber.StatusOK, fiber.Map{
 		"message": "all sessions revoked for user",
 	})
+}
+
+func (h *AuthHandler) parseInput(c *fiber.Ctx, input interface{}) error {
+	if err := c.BodyParser(input); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid input")
+	}
+
+	return nil
 }
