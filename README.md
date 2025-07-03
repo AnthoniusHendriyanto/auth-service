@@ -1,4 +1,5 @@
 # Porto Auth Service
+[![codecov](https://codecov.io/github/AnthoniusHendriyanto/auth-service/graph/badge.svg?token=VV3CFWZG5G)](https://codecov.io/github/AnthoniusHendriyanto/auth-service)
 
 A robust, modular authentication service for the Porto application ecosystem, built in Go using Fiber. This service handles user registration, login, refresh token rotation, secure device tracking, session metadata logging, and role-based access control.
 
@@ -70,42 +71,3 @@ ACCESS_TOKEN_SECRET=...
 REFRESH_TOKEN_SECRET=...
 ACCESS_TOKEN_EXPIRE_MINUTES=15
 REFRESH_TOKEN_EXPIRE_MINUTES=10080  # 7 days
-```
-
----
-
-## Database Tables
-- `users` – includes `role_id` (FK to `roles`)
-- `roles` – defines available roles like `user`, `admin`
-- `refresh_tokens` – tracks device metadata + token state
-- `trusted_devices`
-- `login_attempts`
-
----
-
-## Upcoming Improvements
-1. Add `RequireRole()` middleware for protected admin routes
-2. Brute-force protection per IP/user (via middleware and login attempt tracking)
-3. Admin endpoints for user/session management (e.g. list users, revoke sessions)
-4. Integration test suite and CI pipeline
-5. Deployment to GCP (Cloud Run / Cloud SQL / Secret Manager etc.)
-6. Cloud Scheduler for expired token cleanup
-
----
-
-## Architecture Notes
-
-This project follows Clean Architecture principles adapted for Go. Folder structure is organized as:
-
-- `domain/` — Core business entities and interfaces (e.g. `User`, `UserRepository`)
-- `service/` — Application logic (use cases)
-- `repository/` — Infrastructure layer, with PostgreSQL-specific implementation
-- `handler/` — HTTP delivery layer, built using Fiber
-- `dto/` — Data Transfer Objects for request/response (kept separate to avoid leaking transport logic into domain)
-
-This separation ensures that business logic remains framework-agnostic and testable. DTOs are intentionally **not** placed inside the domain layer.
-
----
-
-## License
-MIT License
