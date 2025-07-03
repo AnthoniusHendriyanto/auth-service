@@ -47,6 +47,7 @@ Admin-only endpoint to revoke **all refresh tokens** for a given user.
 - **Language:** Go
 - **Framework:** Fiber
 - **Database:** PostgreSQL (accessed via `pgx`)
+- **Testing:** Testify, Gomock
 - **Migration Tool:** Manual SQL
 - **Config:** Viper
 
