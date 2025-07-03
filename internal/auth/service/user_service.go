@@ -15,11 +15,11 @@ import (
 
 type UserService struct {
 	repo         domain.UserRepository
-	tokenService *TokenService
+	tokenService TokenGenerator
 	cfg          *config.Config
 }
 
-func NewUserService(repo domain.UserRepository, tokenService *TokenService, cfg *config.Config) *UserService {
+func NewUserService(repo domain.UserRepository, tokenService TokenGenerator, cfg *config.Config) *UserService {
 	return &UserService{
 		repo:         repo,
 		tokenService: tokenService,
@@ -98,7 +98,7 @@ func (s *UserService) Login(input dto.LoginInput) (*dto.TokenResponse, error) {
 		DeviceFingerprint: input.Fingerprint,
 		IPAddress:         input.IPAddress,
 		UserAgent:         input.UserAgent,
-		ExpiresAt:         now.Add(s.tokenService.RefreshTokenExpiry * time.Minute),
+		ExpiresAt:         now.Add(s.tokenService.GetRefreshTokenExpiry()),
 		CreatedAt:         now,
 		Revoked:           false,
 	}
@@ -119,7 +119,7 @@ func (s *UserService) Login(input dto.LoginInput) (*dto.TokenResponse, error) {
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		TokenType:    authconstant.DefaultTokenType,
-		ExpiresIn:    int(s.tokenService.AccessTokenExpiry.Seconds()),
+		ExpiresIn:    int(s.tokenService.GetAccessTokenExpiry().Seconds()),
 	}, nil
 }
 
@@ -206,6 +206,6 @@ func (s *UserService) generateAndStoreNewTokens(oldToken *domain.RefreshToken,
 		AccessToken:  accessToken,
 		RefreshToken: newRefreshToken,
 		TokenType:    authconstant.DefaultTokenType,
-		ExpiresIn:    int(s.tokenService.AccessTokenExpiry.Seconds()),
+		ExpiresIn:    int(s.tokenService.GetAccessTokenExpiry().Seconds()),
 	}, nil
 }
