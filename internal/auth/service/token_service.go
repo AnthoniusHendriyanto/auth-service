@@ -6,6 +6,12 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+type TokenGenerator interface {
+	Generate(userID, email, role string) (string, string, time.Time, error)
+	GetAccessTokenExpiry() time.Duration
+	GetRefreshTokenExpiry() time.Duration
+}
+
 type TokenService struct {
 	AccessTokenSecret  string
 	RefreshTokenSecret string
@@ -63,4 +69,12 @@ func (ts *TokenService) Generate(userID, email, role string) (string, string, ti
 	}
 
 	return accessToken, refreshToken, now.Add(ts.AccessTokenExpiry), nil
+}
+
+func (ts *TokenService) GetAccessTokenExpiry() time.Duration {
+	return ts.AccessTokenExpiry
+}
+
+func (ts *TokenService) GetRefreshTokenExpiry() time.Duration {
+	return ts.RefreshTokenExpiry
 }
