@@ -8,6 +8,7 @@ import (
 	reflect "reflect"
 	time "time"
 
+	service "github.com/AnthoniusHendriyanto/auth-service/internal/auth/service"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -35,9 +36,9 @@ func (m *MockTokenGenerator) EXPECT() *MockTokenGeneratorMockRecorder {
 }
 
 // Generate mocks base method.
-func (m *MockTokenGenerator) Generate(userID, email, role string) (string, string, time.Time, error) {
+func (m *MockTokenGenerator) Generate(arg0, arg1, arg2 string) (string, string, time.Time, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Generate", userID, email, role)
+	ret := m.ctrl.Call(m, "Generate", arg0, arg1, arg2)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(string)
 	ret2, _ := ret[2].(time.Time)
@@ -46,9 +47,9 @@ func (m *MockTokenGenerator) Generate(userID, email, role string) (string, strin
 }
 
 // Generate indicates an expected call of Generate.
-func (mr *MockTokenGeneratorMockRecorder) Generate(userID, email, role interface{}) *gomock.Call {
+func (mr *MockTokenGeneratorMockRecorder) Generate(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Generate", reflect.TypeOf((*MockTokenGenerator)(nil).Generate), userID, email, role)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Generate", reflect.TypeOf((*MockTokenGenerator)(nil).Generate), arg0, arg1, arg2)
 }
 
 // GetAccessTokenExpiry mocks base method.
@@ -77,4 +78,19 @@ func (m *MockTokenGenerator) GetRefreshTokenExpiry() time.Duration {
 func (mr *MockTokenGeneratorMockRecorder) GetRefreshTokenExpiry() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRefreshTokenExpiry", reflect.TypeOf((*MockTokenGenerator)(nil).GetRefreshTokenExpiry))
+}
+
+// VerifyAccessToken mocks base method.
+func (m *MockTokenGenerator) VerifyAccessToken(arg0 string) (*service.JWTCustomClaims, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VerifyAccessToken", arg0)
+	ret0, _ := ret[0].(*service.JWTCustomClaims)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// VerifyAccessToken indicates an expected call of VerifyAccessToken.
+func (mr *MockTokenGeneratorMockRecorder) VerifyAccessToken(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyAccessToken", reflect.TypeOf((*MockTokenGenerator)(nil).VerifyAccessToken), arg0)
 }
