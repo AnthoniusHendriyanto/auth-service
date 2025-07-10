@@ -1,5 +1,7 @@
 package domain
 
+//go:generate mockgen -destination=../../mocks/mock_user_repository.go -package=mocks github.com/AnthoniusHendriyanto/auth-service/internal/auth/domain UserRepository
+
 // UserManager handles user CRUD operations
 type UserManager interface {
 	GetByEmail(email string) (*User, error)
