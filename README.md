@@ -17,6 +17,9 @@ A robust, modular authentication service for the Porto application ecosystem, bu
 - 🌍 Environment-based config via Viper
 - 🗃️ PostgreSQL database using `pgx`
 - 🧪 Clean Architecture
+- 🛡️ Role-Based Access Control: Middleware to enforce role-based access for specific endpoints.
+- 🔒 Brute-Force Protection: Limits login attempts from a single IP address to prevent brute-force attacks.
+- 🔄 CI Pipeline: Continuous integration pipeline to build, test, and scan the code for vulnerabilities and quality issues.
 
 ---
 
@@ -27,21 +30,19 @@ Registers a new user with role `user`. Returns user ID and email.
 
 ### `POST /api/v1/login`
 Authenticates a user and returns access & refresh tokens.
-- Access token includes `user_id`, `email`, and `role`
-- Automatically logs login attempt and upserts trusted device
+- The access token payload includes the user_id, email, and role. 
+- This endpoint automatically logs the login attempt and upserts the device as a trusted device.
 
 ### `POST /api/v1/refresh`
 Rotates the refresh token after validating metadata.
-- Validates fingerprint, IP, and expiry
-- Revokes old token and issues new pair
-- Cleans up old tokens if exceeding active limit
+- The process includes validation of the device fingerprint, IP address, and token expiration.
+- It revokes the old token and issues a new pair of access and refresh tokens.
 
 ### `DELETE /api/v1/session`
-Revokes the current refresh token. Useful for user-initiated logout from a device/session.
+Revokes the provided refresh token, effectively logging the user out from that session.
 
 ### `DELETE /api/v1/user/:id/sessions`
-Admin-only endpoint to revoke **all refresh tokens** for a given user.
-- Used to log out user from all devices
+This is an ***admin-only*** endpoint that revokes all active refresh tokens for a specific user, logging them out of all devices.
 
 ---
 
@@ -56,11 +57,11 @@ Admin-only endpoint to revoke **all refresh tokens** for a given user.
 ---
 
 ## Security Features
-- Device fingerprint, IP address, and user agent tracking
-- Enforced refresh token expiry and active token limit
-- Role-based access control using `roles` table (`user`, `admin`)
-- Refresh token revocation and re-issuance with fingerprint match
-- Full session wipe via force logout
+- Device Fingerprint and Metadata Tracking: The service tracks the device fingerprint, IP address, and user agent for each session.
+- Token Expiry and Revocation: Enforces refresh token expiry and ensures that tokens are revoked upon refresh and logout.
+- Role-Based Access Control: Utilizes a roles table (user, admin) to manage user permissions.
+- Secure Token Re-issuance: Matches the device fingerprint to prevent unauthorized token re-issuance.
+- Session Invalidation: Provides a mechanism for admins to forcefully log out a user from all active sessions.
 
 ---
 
@@ -68,42 +69,39 @@ Admin-only endpoint to revoke **all refresh tokens** for a given user.
 ```env
 PORT=8080
 DB_URL=postgres://user:pass@localhost:5432/porto_auth
-ACCESS_TOKEN_SECRET=...
-REFRESH_TOKEN_SECRET=...
-ACCESS_TOKEN_EXPIRE_MINUTES=15
-REFRESH_TOKEN_EXPIRE_MINUTES=10080  # 7 days
+ACCESS_TOKEN_SECRET=your_access_token_secret
+REFRESH_TOKEN_SECRET=your_refresh_token_secret
+ACCESS_TOKEN_EXPIRY=15
+REFRESH_TOKEN_EXPIRY=10080  # 7 days
 ```
 
 ---
 
 ## Database Tables
-- `users` – includes `role_id` (FK to `roles`)
-- `roles` – defines available roles like `user`, `admin`
-- `refresh_tokens` – tracks device metadata + token state
-- `trusted_devices`
-- `login_attempts`
+- `users` – Stores user information, including a `role_id` as a foreign key to the `roles` table.
+- `roles` – Defines the available user roles, such as `user` and `admin`.
+- `refresh_tokens` – Tracks refresh tokens, including device metadata and the token's revocation status.
+- `trusted_devices` - Stores information about devices that have been used to log in.
+- `login_attempts` - Logs all login attempts for security monitoring.
 
 ---
 
 ## Upcoming Improvements
-1. Add `RequireRole()` middleware for protected admin routes
-2. Brute-force protection per IP/user (via middleware and login attempt tracking)
-3. Admin endpoints for user/session management (e.g. list users, revoke sessions)
-4. Integration test suite and CI pipeline
-5. Deployment to GCP (Cloud Run / Cloud SQL / Secret Manager etc.)
-6. Cloud Scheduler for expired token cleanup
+1. Admin endpoints for user/session management (e.g. list users, revoke sessions)
+2. Deployment to a cloud provider like GCP (e.g., Cloud Run, Cloud SQL, Secret Manager).
+3. A scheduled job (e.g., Cloud Scheduler) for cleaning up expired tokens from the database.
 
 ---
 
 ## Architecture Notes
 
-This project follows Clean Architecture principles adapted for Go. Folder structure is organized as:
+This project follows Clean Architecture principles adapted for Go. The folder structure is organized as follows:
 
-- `domain/` — Core business entities and interfaces (e.g. `User`, `UserRepository`)
-- `service/` — Application logic (use cases)
-- `repository/` — Infrastructure layer, with PostgreSQL-specific implementation
-- `handler/` — HTTP delivery layer, built using Fiber
-- `dto/` — Data Transfer Objects for request/response (kept separate to avoid leaking transport logic into domain)
+- `domain/` — Contains the core business entities and interfaces (e.g., `User`, `UserRepository`).
+- `service/` — Implements the application's business logic (use cases).
+- `repository/` — The infrastructure layer, with a PostgreSQL-specific implementation.
+- `handler/` — The HTTP delivery layer, built using the Fiber framework.
+- `dto/` — Data Transfer Objects (DTOs) for handling request and response data, keeping the transport layer separate from the domain.
 
 This separation ensures that business logic remains framework-agnostic and testable. DTOs are intentionally **not** placed inside the domain layer.
 
