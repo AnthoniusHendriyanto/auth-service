@@ -1,9 +1,10 @@
-package service
+package service_test
 
 import (
 	"testing"
 	"time"
 
+	"github.com/AnthoniusHendriyanto/auth-service/internal/auth/service"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,7 +36,7 @@ func TestNewTokenService(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ts := NewTokenService(tt.accessSecret, tt.refreshSecret, tt.accessMinutes, tt.refreshMinutes)
+			ts := service.NewTokenService(tt.accessSecret, tt.refreshSecret, tt.accessMinutes, tt.refreshMinutes)
 
 			assert.NotNil(t, ts)
 			assert.Equal(t, tt.accessSecret, ts.AccessTokenSecret)
@@ -96,7 +97,7 @@ func TestTokenService_Generate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ts := NewTokenService(tt.accessSecret, tt.refreshSecret, tt.accessMinutes, tt.refreshMinutes)
+			ts := service.NewTokenService(tt.accessSecret, tt.refreshSecret, tt.accessMinutes, tt.refreshMinutes)
 
 			beforeGenerate := time.Now()
 			accessToken, refreshToken, expiryTime, err := ts.Generate(tt.userID, tt.email, tt.role)
@@ -119,7 +120,7 @@ func TestTokenService_Generate(t *testing.T) {
 				assert.True(t, expiryTime.Before(afterGenerate.Add(ts.AccessTokenExpiry).Add(time.Second)))
 
 				// Verify access token claims
-				accessClaims := &JWTCustomClaims{}
+				accessClaims := &service.JWTCustomClaims{}
 				accessTokenParsed, err := jwt.ParseWithClaims(accessToken, accessClaims,
 					func(token *jwt.Token) (interface{}, error) {
 						return []byte(tt.accessSecret), nil
@@ -131,7 +132,7 @@ func TestTokenService_Generate(t *testing.T) {
 				assert.Equal(t, tt.role, accessClaims.Role)
 
 				// Verify refresh token claims
-				refreshClaims := &JWTCustomClaims{}
+				refreshClaims := &service.JWTCustomClaims{}
 				refreshTokenParsed, err := jwt.ParseWithClaims(refreshToken, refreshClaims,
 					func(token *jwt.Token) (interface{}, error) {
 						return []byte(tt.refreshSecret), nil
@@ -154,7 +155,7 @@ func TestTokenService_Generate(t *testing.T) {
 
 func TestTokenService_Generate_InvalidSecret(t *testing.T) {
 	// Test with very short secret that might cause signing issues
-	ts := NewTokenService("x", "y", 15, 1440)
+	ts := service.NewTokenService("x", "y", 15, 1440)
 
 	accessToken, refreshToken, expiryTime, err := ts.Generate("user-123", "test@example.com", "user")
 
@@ -166,7 +167,7 @@ func TestTokenService_Generate_InvalidSecret(t *testing.T) {
 }
 
 func TestTokenService_Generate_TokenValidation(t *testing.T) {
-	ts := NewTokenService("test-access-secret", "test-refresh-secret", 15, 1440)
+	ts := service.NewTokenService("test-access-secret", "test-refresh-secret", 15, 1440)
 
 	userID := "test-user-123"
 	email := "test@example.com"
@@ -176,7 +177,7 @@ func TestTokenService_Generate_TokenValidation(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test access token with wrong secret should fail
-	wrongClaims := &JWTCustomClaims{}
+	wrongClaims := &service.JWTCustomClaims{}
 	_, err = jwt.ParseWithClaims(accessToken, wrongClaims, func(token *jwt.Token) (interface{}, error) {
 		return []byte("wrong-secret"), nil
 	})
@@ -190,7 +191,7 @@ func TestTokenService_Generate_TokenValidation(t *testing.T) {
 }
 
 func TestTokenService_Generate_TimeConsistency(t *testing.T) {
-	ts := NewTokenService("test-access-secret", "test-refresh-secret", 30, 1440)
+	ts := service.NewTokenService("test-access-secret", "test-refresh-secret", 30, 1440)
 
 	// Generate multiple tokens and ensure time consistency
 	for i := 0; i < 5; i++ {
@@ -209,4 +210,97 @@ func TestTokenService_Generate_TimeConsistency(t *testing.T) {
 		// Small delay to ensure different timestamps
 		time.Sleep(time.Millisecond)
 	}
+}
+
+func TestTokenService_VerifyAccessToken(t *testing.T) {
+	secret := "supersecretaccesskey"
+	userID := "user123"
+	email := "test@example.com"
+	role := "user"
+
+	ts := service.NewTokenService(secret, "any_refresh_secret", 15, 1440)
+
+	t.Run("successful verification", func(t *testing.T) {
+		accessToken, _, _, err := ts.Generate(userID, email, role)
+		require.NoError(t, err)
+
+		claims, err := ts.VerifyAccessToken(accessToken)
+		assert.NoError(t, err)
+		assert.NotNil(t, claims)
+		assert.Equal(t, userID, claims.UserID)
+		assert.Equal(t, email, claims.Email)
+		assert.Equal(t, role, claims.Role)
+		assert.True(t, claims.ExpiresAt.Time.After(time.Now()))
+	})
+
+	t.Run("invalid token string format", func(t *testing.T) {
+		invalidToken := "this.is.not.a.jwt"
+		claims, err := ts.VerifyAccessToken(invalidToken)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "token contains an invalid number of segments")
+		assert.Nil(t, claims)
+	})
+
+	t.Run("token signed with wrong secret", func(t *testing.T) {
+		wrongSecretTS := service.NewTokenService("wrong_secret", "any_refresh_secret", 15, 1440)
+		accessToken, _, _, err := wrongSecretTS.Generate(userID, email, role) // Token generated with wrong_secret
+		require.NoError(t, err)
+
+		claims, err := ts.VerifyAccessToken(accessToken) // Verify with correct secret
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "signature is invalid")
+		assert.Nil(t, claims)
+	})
+
+	t.Run("expired token", func(t *testing.T) {
+		// Create a TokenService with a very short expiry for testing
+		shortExpiryTS := service.NewTokenService(secret, "any_refresh_secret", -1, 1440) // -1 minute expiry
+		accessToken, _, _, err := shortExpiryTS.Generate(userID, email, role)
+		require.NoError(t, err)
+
+		// A slight delay to ensure the token is actually expired by the time of verification
+		time.Sleep(10 * time.Millisecond)
+
+		claims, err := ts.VerifyAccessToken(accessToken)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "token has invalid claims: token is expired")
+		assert.Nil(t, claims)
+	})
+
+	t.Run("token with unexpected signing method", func(t *testing.T) {
+		// Manually create a token with a different signing method (e.g., none)
+		claims := &service.JWTCustomClaims{
+			UserID: userID,
+			Email:  email,
+			Role:   role,
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
+			},
+		}
+		//nolint:errchkjson
+		token := jwt.NewWithClaims(jwt.SigningMethodNone, claims)
+		accessToken, err := token.SignedString(jwt.UnsafeAllowNoneSignatureType) // Sign without secret for "none"
+		require.NoError(t, err)
+
+		claims, err = ts.VerifyAccessToken(accessToken)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unexpected signing method: none")
+		assert.Nil(t, claims)
+	})
+
+	t.Run("token with missing claims (malformed but valid signature)", func(t *testing.T) {
+		// Create a token with minimal claims to see if it causes issues
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
+		})
+		accessToken, err := token.SignedString([]byte(secret))
+		require.NoError(t, err)
+
+		claims, err := ts.VerifyAccessToken(accessToken)
+		assert.NoError(t, err) // It should still parse successfully, but UserID/Email/Role would be empty
+		assert.NotNil(t, claims)
+		assert.Empty(t, claims.UserID)
+		assert.Empty(t, claims.Email)
+		assert.Empty(t, claims.Role)
+	})
 }

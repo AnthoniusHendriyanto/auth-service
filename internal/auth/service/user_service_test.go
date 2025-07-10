@@ -1,4 +1,4 @@
-package service
+package service_test
 
 import (
 	"errors"
@@ -8,6 +8,7 @@ import (
 	"github.com/AnthoniusHendriyanto/auth-service/config"
 	"github.com/AnthoniusHendriyanto/auth-service/internal/auth/domain"
 	"github.com/AnthoniusHendriyanto/auth-service/internal/auth/dto"
+	"github.com/AnthoniusHendriyanto/auth-service/internal/auth/service"
 	autherror "github.com/AnthoniusHendriyanto/auth-service/internal/errors"
 	"github.com/AnthoniusHendriyanto/auth-service/internal/mocks"
 	authconstant "github.com/AnthoniusHendriyanto/auth-service/pkg/constant"
@@ -15,22 +16,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
 )
-
-func TestNewUserService(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockRepo := mocks.NewMockUserRepository(ctrl)
-	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
-	cfg := &config.Config{}
-
-	service := NewUserService(mockRepo, mockTokenService, cfg)
-
-	assert.NotNil(t, service)
-	assert.Equal(t, mockRepo, service.repo)
-	assert.Equal(t, mockTokenService, service.tokenService)
-	assert.Equal(t, cfg, service.cfg)
-}
 
 func TestUserService_Register_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -40,7 +25,7 @@ func TestUserService_Register_Success(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	input := dto.RegisterInput{
 		Email:    "test@example.com",
@@ -51,7 +36,7 @@ func TestUserService_Register_Success(t *testing.T) {
 	mockRepo.EXPECT().GetByEmail(input.Email).Return(nil, nil)
 	mockRepo.EXPECT().Create(gomock.Any()).Return(nil)
 
-	user, err := service.Register(input)
+	user, err := s.Register(input)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, user)
@@ -71,7 +56,7 @@ func TestUserService_Register_EmailAlreadyExists(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	input := dto.RegisterInput{
 		Email:    "test@example.com",
@@ -86,7 +71,7 @@ func TestUserService_Register_EmailAlreadyExists(t *testing.T) {
 	// Mock expectations
 	mockRepo.EXPECT().GetByEmail(input.Email).Return(existingUser, nil)
 
-	user, err := service.Register(input)
+	user, err := s.Register(input)
 
 	assert.Error(t, err)
 	assert.Equal(t, autherror.ErrEmailAlreadyInUse, err)
@@ -101,7 +86,7 @@ func TestUserService_Register_GetByEmailError(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	input := dto.RegisterInput{
 		Email:    "test@example.com",
@@ -113,7 +98,7 @@ func TestUserService_Register_GetByEmailError(t *testing.T) {
 	// Mock expectations
 	mockRepo.EXPECT().GetByEmail(input.Email).Return(nil, expectedError)
 
-	user, err := service.Register(input)
+	user, err := s.Register(input)
 
 	assert.Error(t, err)
 	assert.Equal(t, expectedError, err)
@@ -128,7 +113,7 @@ func TestUserService_Register_CreateError(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	input := dto.RegisterInput{
 		Email:    "test@example.com",
@@ -141,7 +126,7 @@ func TestUserService_Register_CreateError(t *testing.T) {
 	mockRepo.EXPECT().GetByEmail(input.Email).Return(nil, nil)
 	mockRepo.EXPECT().Create(gomock.Any()).Return(expectedError)
 
-	user, err := service.Register(input)
+	user, err := s.Register(input)
 
 	assert.Error(t, err)
 	assert.Equal(t, expectedError, err)
@@ -159,7 +144,7 @@ func TestUserService_Login_Success(t *testing.T) {
 		LoginMaxAttempts:       5,
 	}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	password := "password123"
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -195,7 +180,7 @@ func TestUserService_Login_Success(t *testing.T) {
 	mockRepo.EXPECT().RecordLoginAttempt(input.Email, input.IPAddress, true).Return(nil)
 	mockTokenService.EXPECT().GetAccessTokenExpiry().Return(accessTokenExpiry)
 
-	response, err := service.Login(input)
+	response, err := s.Login(input)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, response)
@@ -216,7 +201,7 @@ func TestUserService_Login_TooManyAttempts(t *testing.T) {
 		LoginMaxAttempts:       5,
 	}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	input := dto.LoginInput{
 		Email:     "test@example.com",
@@ -227,7 +212,7 @@ func TestUserService_Login_TooManyAttempts(t *testing.T) {
 	// Mock expectations
 	mockRepo.EXPECT().CountRecentFailedAttempts(input.Email, input.IPAddress, cfg.MaxActiveRefreshTokens).Return(6, nil)
 
-	response, err := service.Login(input)
+	response, err := s.Login(input)
 
 	assert.Error(t, err)
 	assert.Equal(t, autherror.ErrTooManyLoginAttempts, err)
@@ -245,7 +230,7 @@ func TestUserService_Login_CountFailedAttemptsError(t *testing.T) {
 		LoginMaxAttempts:       5,
 	}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	input := dto.LoginInput{
 		Email:     "test@example.com",
@@ -259,7 +244,7 @@ func TestUserService_Login_CountFailedAttemptsError(t *testing.T) {
 	mockRepo.EXPECT().CountRecentFailedAttempts(input.Email, input.IPAddress,
 		cfg.MaxActiveRefreshTokens).Return(0, expectedError)
 
-	response, err := service.Login(input)
+	response, err := s.Login(input)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check login attempts")
@@ -277,7 +262,7 @@ func TestUserService_Login_UserNotFound(t *testing.T) {
 		LoginMaxAttempts:       5,
 	}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	input := dto.LoginInput{
 		Email:     "test@example.com",
@@ -290,7 +275,7 @@ func TestUserService_Login_UserNotFound(t *testing.T) {
 	mockRepo.EXPECT().GetByEmail(input.Email).Return(nil, nil)
 	mockRepo.EXPECT().RecordLoginAttempt(input.Email, input.IPAddress, false).Return(nil)
 
-	response, err := service.Login(input)
+	response, err := s.Login(input)
 
 	assert.Error(t, err)
 	assert.Equal(t, autherror.ErrInvalidCredentials, err)
@@ -308,7 +293,7 @@ func TestUserService_Login_InvalidPassword(t *testing.T) {
 		LoginMaxAttempts:       5,
 	}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("correct-password"), bcrypt.DefaultCost)
 
@@ -329,7 +314,7 @@ func TestUserService_Login_InvalidPassword(t *testing.T) {
 	mockRepo.EXPECT().GetByEmail(input.Email).Return(user, nil)
 	mockRepo.EXPECT().RecordLoginAttempt(input.Email, input.IPAddress, false).Return(nil)
 
-	response, err := service.Login(input)
+	response, err := s.Login(input)
 
 	assert.Error(t, err)
 	assert.Equal(t, autherror.ErrInvalidCredentials, err)
@@ -347,7 +332,7 @@ func TestUserService_Login_TokenGenerationError(t *testing.T) {
 		LoginMaxAttempts:       5,
 	}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	password := "password123"
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -372,7 +357,7 @@ func TestUserService_Login_TokenGenerationError(t *testing.T) {
 	mockRepo.EXPECT().GetByEmail(input.Email).Return(user, nil)
 	mockTokenService.EXPECT().Generate(user.ID, user.Email, user.RoleName).Return("", "", time.Time{}, expectedError)
 
-	response, err := service.Login(input)
+	response, err := s.Login(input)
 
 	assert.Error(t, err)
 	assert.Equal(t, expectedError, err)
@@ -387,7 +372,7 @@ func TestUserService_Refresh_Success(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	refreshToken := &domain.RefreshToken{
 		ID:                "token-id",
@@ -425,7 +410,7 @@ func TestUserService_Refresh_Success(t *testing.T) {
 	mockRepo.EXPECT().StoreRefreshToken(gomock.Any()).Return(nil)
 	mockTokenService.EXPECT().GetAccessTokenExpiry().Return(accessTokenExpiry)
 
-	response, err := service.Refresh(input)
+	response, err := s.Refresh(input)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, response)
@@ -443,7 +428,7 @@ func TestUserService_Refresh_InvalidToken(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	input := dto.RefreshInput{
 		RefreshToken: "invalid-token",
@@ -453,7 +438,7 @@ func TestUserService_Refresh_InvalidToken(t *testing.T) {
 	// Mock expectations
 	mockRepo.EXPECT().GetRefreshToken(input.RefreshToken).Return(nil, nil)
 
-	response, err := service.Refresh(input)
+	response, err := s.Refresh(input)
 
 	assert.Error(t, err)
 	assert.Equal(t, autherror.ErrRefreshTokenNotFound, err)
@@ -468,7 +453,7 @@ func TestUserService_Refresh_RevokedToken(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	refreshToken := &domain.RefreshToken{
 		ID:                "token-id",
@@ -487,7 +472,7 @@ func TestUserService_Refresh_RevokedToken(t *testing.T) {
 	// Mock expectations
 	mockRepo.EXPECT().GetRefreshToken(input.RefreshToken).Return(refreshToken, nil)
 
-	response, err := service.Refresh(input)
+	response, err := s.Refresh(input)
 
 	assert.Error(t, err)
 	assert.Equal(t, autherror.ErrRefreshTokenRevoked, err)
@@ -502,7 +487,7 @@ func TestUserService_Refresh_FingerprintMismatch(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	refreshToken := &domain.RefreshToken{
 		ID:                "token-id",
@@ -521,7 +506,7 @@ func TestUserService_Refresh_FingerprintMismatch(t *testing.T) {
 	// Mock expectations
 	mockRepo.EXPECT().GetRefreshToken(input.RefreshToken).Return(refreshToken, nil)
 
-	response, err := service.Refresh(input)
+	response, err := s.Refresh(input)
 
 	assert.Error(t, err)
 	assert.Equal(t, autherror.ErrDeviceFingerprintMismatch, err)
@@ -536,7 +521,7 @@ func TestUserService_Refresh_ExpiredToken(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	refreshToken := &domain.RefreshToken{
 		ID:                "token-id",
@@ -555,7 +540,7 @@ func TestUserService_Refresh_ExpiredToken(t *testing.T) {
 	// Mock expectations
 	mockRepo.EXPECT().GetRefreshToken(input.RefreshToken).Return(refreshToken, nil)
 
-	response, err := service.Refresh(input)
+	response, err := s.Refresh(input)
 
 	assert.Error(t, err)
 	assert.Equal(t, autherror.ErrRefreshTokenExpired, err)
@@ -570,7 +555,7 @@ func TestUserService_Logout_Success(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	refreshToken := &domain.RefreshToken{
 		ID:      "token-id",
@@ -582,7 +567,7 @@ func TestUserService_Logout_Success(t *testing.T) {
 	mockRepo.EXPECT().GetRefreshToken("refresh-token").Return(refreshToken, nil)
 	mockRepo.EXPECT().RevokeRefreshToken(refreshToken.ID).Return(nil)
 
-	err := service.Logout("refresh-token")
+	err := s.Logout("refresh-token")
 
 	assert.NoError(t, err)
 }
@@ -595,12 +580,12 @@ func TestUserService_Logout_TokenNotFound(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	// Mock expectations
 	mockRepo.EXPECT().GetRefreshToken("invalid-token").Return(nil, nil)
 
-	err := service.Logout("invalid-token")
+	err := s.Logout("invalid-token")
 
 	assert.Error(t, err)
 	assert.Equal(t, autherror.ErrRefreshTokenNotFound, err)
@@ -614,7 +599,7 @@ func TestUserService_Logout_AlreadyRevoked(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	refreshToken := &domain.RefreshToken{
 		ID:      "token-id",
@@ -625,7 +610,7 @@ func TestUserService_Logout_AlreadyRevoked(t *testing.T) {
 	// Mock expectations
 	mockRepo.EXPECT().GetRefreshToken("refresh-token").Return(refreshToken, nil)
 
-	err := service.Logout("refresh-token")
+	err := s.Logout("refresh-token")
 
 	assert.Error(t, err)
 	assert.Equal(t, autherror.ErrRefreshTokenRevoked, err)
@@ -639,14 +624,14 @@ func TestUserService_ForceLogoutByUserID_Success(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	userID := "user-id"
 
 	// Mock expectations
 	mockRepo.EXPECT().RevokeAllRefreshTokensByUserID(userID).Return(nil)
 
-	err := service.ForceLogoutByUserID(userID)
+	err := s.ForceLogoutByUserID(userID)
 
 	assert.NoError(t, err)
 }
@@ -659,7 +644,7 @@ func TestUserService_ForceLogoutByUserID_Error(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	userID := "user-id"
 	expectedError := errors.New("database error")
@@ -667,7 +652,7 @@ func TestUserService_ForceLogoutByUserID_Error(t *testing.T) {
 	// Mock expectations
 	mockRepo.EXPECT().RevokeAllRefreshTokensByUserID(userID).Return(expectedError)
 
-	err := service.ForceLogoutByUserID(userID)
+	err := s.ForceLogoutByUserID(userID)
 
 	assert.Error(t, err)
 	assert.Equal(t, expectedError, err)
@@ -681,7 +666,7 @@ func TestUserService_validateRefreshToken_Success(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	refreshToken := &domain.RefreshToken{
 		ID:                "token-id",
@@ -700,7 +685,7 @@ func TestUserService_validateRefreshToken_Success(t *testing.T) {
 	// Mock expectations
 	mockRepo.EXPECT().GetRefreshToken(input.RefreshToken).Return(refreshToken, nil)
 
-	result, err := service.validateRefreshToken(input)
+	result, err := s.ValidateRefreshToken(input)
 
 	assert.NoError(t, err)
 	assert.Equal(t, refreshToken, result)
@@ -714,7 +699,7 @@ func TestUserService_generateAndStoreNewTokens_Success(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	oldToken := &domain.RefreshToken{
 		ID:     "old-token-id",
@@ -745,7 +730,7 @@ func TestUserService_generateAndStoreNewTokens_Success(t *testing.T) {
 	mockRepo.EXPECT().StoreRefreshToken(gomock.Any()).Return(nil)
 	mockTokenService.EXPECT().GetAccessTokenExpiry().Return(accessTokenExpiry)
 
-	response, err := service.generateAndStoreNewTokens(oldToken, input)
+	response, err := s.GenerateAndStoreNewTokens(oldToken, input)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, response)
@@ -763,7 +748,7 @@ func TestUserService_generateAndStoreNewTokens_UserNotFound(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	oldToken := &domain.RefreshToken{
 		ID:     "old-token-id",
@@ -779,7 +764,7 @@ func TestUserService_generateAndStoreNewTokens_UserNotFound(t *testing.T) {
 	// Mock expectations
 	mockRepo.EXPECT().GetByIDWithRole(oldToken.UserID).Return(nil, nil)
 
-	response, err := service.generateAndStoreNewTokens(oldToken, input)
+	response, err := s.GenerateAndStoreNewTokens(oldToken, input)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "user not found for token refresh")
@@ -794,7 +779,7 @@ func TestUserService_generateAndStoreNewTokens_TokenGenerationError(t *testing.T
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	oldToken := &domain.RefreshToken{
 		ID:     "old-token-id",
@@ -819,7 +804,7 @@ func TestUserService_generateAndStoreNewTokens_TokenGenerationError(t *testing.T
 	mockRepo.EXPECT().GetByIDWithRole(oldToken.UserID).Return(user, nil)
 	mockTokenService.EXPECT().Generate(user.ID, user.Email, user.RoleName).Return("", "", time.Time{}, expectedError)
 
-	response, err := service.generateAndStoreNewTokens(oldToken, input)
+	response, err := s.GenerateAndStoreNewTokens(oldToken, input)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to generate new tokens")
@@ -834,7 +819,7 @@ func TestUserService_generateAndStoreNewTokens_StoreError(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	oldToken := &domain.RefreshToken{
 		ID:     "old-token-id",
@@ -864,7 +849,7 @@ func TestUserService_generateAndStoreNewTokens_StoreError(t *testing.T) {
 		Return(accessToken, newRefreshToken, expiresAt, nil)
 	mockRepo.EXPECT().StoreRefreshToken(gomock.Any()).Return(expectedError)
 
-	response, err := service.generateAndStoreNewTokens(oldToken, input)
+	response, err := s.GenerateAndStoreNewTokens(oldToken, input)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to store new refresh token")
@@ -882,7 +867,7 @@ func TestUserService_Login_StoreRefreshTokenError(t *testing.T) {
 		LoginMaxAttempts:       5,
 	}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	password := "password123"
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -915,7 +900,7 @@ func TestUserService_Login_StoreRefreshTokenError(t *testing.T) {
 	mockTokenService.EXPECT().GetRefreshTokenExpiry().Return(7 * 24 * time.Hour)
 	mockRepo.EXPECT().StoreRefreshToken(gomock.Any()).Return(expectedError)
 
-	response, err := service.Login(input)
+	response, err := s.Login(input)
 
 	assert.Error(t, err)
 	assert.Equal(t, expectedError, err)
@@ -933,7 +918,7 @@ func TestUserService_Login_UpsertTrustedDeviceError(t *testing.T) {
 		LoginMaxAttempts:       5,
 	}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	password := "password123"
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -969,7 +954,7 @@ func TestUserService_Login_UpsertTrustedDeviceError(t *testing.T) {
 	mockRepo.EXPECT().UpsertTrustedDevice(user.ID, input.Fingerprint, input.UserAgent, input.IPAddress).
 		Return(expectedError)
 
-	response, err := service.Login(input)
+	response, err := s.Login(input)
 
 	assert.Error(t, err)
 	assert.Equal(t, expectedError, err)
@@ -987,7 +972,7 @@ func TestUserService_Login_RecordLoginAttemptError(t *testing.T) {
 		LoginMaxAttempts:       5,
 	}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	password := "password123"
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -1022,7 +1007,7 @@ func TestUserService_Login_RecordLoginAttemptError(t *testing.T) {
 	mockRepo.EXPECT().UpsertTrustedDevice(user.ID, input.Fingerprint, input.UserAgent, input.IPAddress).Return(nil)
 	mockRepo.EXPECT().RecordLoginAttempt(input.Email, input.IPAddress, true).Return(expectedError)
 
-	response, err := service.Login(input)
+	response, err := s.Login(input)
 
 	assert.Error(t, err)
 	assert.Equal(t, expectedError, err)
@@ -1037,7 +1022,7 @@ func TestUserService_Refresh_RevokeTokenError(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	refreshToken := &domain.RefreshToken{
 		ID:                "token-id",
@@ -1059,7 +1044,7 @@ func TestUserService_Refresh_RevokeTokenError(t *testing.T) {
 	mockRepo.EXPECT().GetRefreshToken(input.RefreshToken).Return(refreshToken, nil)
 	mockRepo.EXPECT().RevokeRefreshToken(refreshToken.ID).Return(expectedError)
 
-	response, err := service.Refresh(input)
+	response, err := s.Refresh(input)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to revoke token")
@@ -1074,14 +1059,14 @@ func TestUserService_Logout_GetTokenError(t *testing.T) {
 	mockTokenService := mocks.NewMockTokenGenerator(ctrl)
 	cfg := &config.Config{}
 
-	service := NewUserService(mockRepo, mockTokenService, cfg)
+	s := service.NewUserService(mockRepo, mockTokenService, cfg)
 
 	expectedError := errors.New("database error")
 
 	// Mock expectations
 	mockRepo.EXPECT().GetRefreshToken("refresh-token").Return(nil, expectedError)
 
-	err := service.Logout("refresh-token")
+	err := s.Logout("refresh-token")
 
 	assert.Error(t, err)
 	assert.Equal(t, autherror.ErrRefreshTokenNotFound, err)
@@ -1091,7 +1076,7 @@ func TestTokenService_Getters(t *testing.T) {
 	mockAccessTokenExpiry := 15 * time.Minute
 	mockRefreshTokenExpiry := 24 * time.Hour * 7 // 7 days
 
-	ts := &TokenService{
+	ts := &service.TokenService{
 		AccessTokenExpiry:  mockAccessTokenExpiry,
 		RefreshTokenExpiry: mockRefreshTokenExpiry,
 	}
