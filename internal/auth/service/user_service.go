@@ -124,7 +124,7 @@ func (s *UserService) Login(input dto.LoginInput) (*dto.TokenResponse, error) {
 }
 
 func (s *UserService) Refresh(input dto.RefreshInput) (*dto.TokenResponse, error) {
-	token, err := s.validateRefreshToken(input)
+	token, err := s.ValidateRefreshToken(input)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (s *UserService) Refresh(input dto.RefreshInput) (*dto.TokenResponse, error
 		return nil, fmt.Errorf("failed to revoke token: %w", err)
 	}
 
-	return s.generateAndStoreNewTokens(token, input)
+	return s.GenerateAndStoreNewTokens(token, input)
 }
 
 func (s *UserService) Logout(refreshToken string) error {
@@ -153,7 +153,7 @@ func (s *UserService) ForceLogoutByUserID(userID string) error {
 	return s.repo.RevokeAllRefreshTokensByUserID(userID)
 }
 
-func (s *UserService) validateRefreshToken(input dto.RefreshInput) (*domain.RefreshToken, error) {
+func (s *UserService) ValidateRefreshToken(input dto.RefreshInput) (*domain.RefreshToken, error) {
 	token, err := s.repo.GetRefreshToken(input.RefreshToken)
 	if err != nil || token == nil {
 		return nil, autherror.ErrRefreshTokenNotFound
@@ -174,7 +174,7 @@ func (s *UserService) validateRefreshToken(input dto.RefreshInput) (*domain.Refr
 	return token, nil
 }
 
-func (s *UserService) generateAndStoreNewTokens(oldToken *domain.RefreshToken,
+func (s *UserService) GenerateAndStoreNewTokens(oldToken *domain.RefreshToken,
 	input dto.RefreshInput) (*dto.TokenResponse, error) {
 	user, err := s.repo.GetByIDWithRole(oldToken.UserID)
 	if err != nil || user == nil {
