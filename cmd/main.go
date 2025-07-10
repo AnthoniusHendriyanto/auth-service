@@ -19,7 +19,7 @@ func main() {
 	tokenService := service.NewTokenService(cfg.AccessTokenSecret,
 		cfg.RefreshTokenSecret, cfg.AccessExpiryMin, cfg.RefreshExpiryMin)
 	userService := service.NewUserService(userRepo, tokenService, cfg)
-	authHandler := handler.NewAuthHandler(userService)
+	authHandler := handler.NewAuthHandler(userService, tokenService)
 
 	app := fiber.New()
 	handler.RegisterRoutes(app, authHandler)

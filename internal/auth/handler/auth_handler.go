@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/AnthoniusHendriyanto/auth-service/internal/auth/dto"
 	"github.com/AnthoniusHendriyanto/auth-service/internal/auth/service"
@@ -16,11 +17,15 @@ type Response struct {
 }
 
 type AuthHandler struct {
-	userService *service.UserService
+	userService  *service.UserService
+	tokenService service.TokenGenerator
 }
 
-func NewAuthHandler(userService *service.UserService) *AuthHandler {
-	return &AuthHandler{userService: userService}
+func NewAuthHandler(userService *service.UserService, tokenService service.TokenGenerator) *AuthHandler {
+	return &AuthHandler{
+		userService:  userService,
+		tokenService: tokenService,
+	}
 }
 
 func sendError(c *fiber.Ctx, status int, err error) error {
@@ -130,4 +135,36 @@ func (h *AuthHandler) parseInput(c *fiber.Ctx, input interface{}) error {
 	}
 
 	return nil
+}
+
+// RequireRole is a middleware to enforce role-based access control.
+func (h *AuthHandler) RequireRole(requiredRole string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		authHeader := c.Get("Authorization")
+		if authHeader == "" {
+			return sendError(c, fiber.StatusUnauthorized, errors.New("authorization header is missing"))
+		}
+
+		tokenParts := strings.Split(authHeader, " ")
+		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
+			return sendError(c, fiber.StatusUnauthorized, errors.New("invalid authorization header format"))
+		}
+
+		accessToken := tokenParts[1]
+		claims, err := h.tokenService.VerifyAccessToken(accessToken)
+		if err != nil {
+			return sendError(c, fiber.StatusUnauthorized, errors.New("invalid or expired access token"))
+		}
+
+		if claims.Role != requiredRole {
+			return sendError(c, fiber.StatusForbidden, errors.New("insufficient permissions"))
+		}
+
+		// Optionally, store user ID/role in Fiber context for later use in handler
+		c.Locals("userID", claims.UserID)
+		c.Locals("userEmail", claims.Email)
+		c.Locals("userRole", claims.Role)
+
+		return c.Next()
+	}
 }
