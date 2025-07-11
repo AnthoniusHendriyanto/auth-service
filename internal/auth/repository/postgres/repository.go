@@ -7,14 +7,19 @@ import (
 
 	"github.com/AnthoniusHendriyanto/auth-service/internal/auth/domain"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type Repository struct {
-	db *pgxpool.Pool
+	db DBPool
 }
 
-func NewPostgresRepository(db *pgxpool.Pool) *Repository {
+type DBPool interface {
+	Exec(ctx context.Context, sql string, arguments ...interface{}) (pgconn.CommandTag, error)
+	QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row
+}
+
+func NewPostgresRepository(db DBPool) *Repository {
 	return &Repository{db: db}
 }
 
