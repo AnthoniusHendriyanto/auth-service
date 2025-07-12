@@ -72,7 +72,7 @@ func TestRequireRoleMiddleware(t *testing.T) {
 	// Register the routes to apply the middleware
 	handler.RegisterRoutes(app, authHandler)
 
-	adminRoute := "/api/v1/user/admin-test-id/sessions"
+	adminRoute := "/api/v1/admin/user/admin-test-id/sessions"
 
 	// --- Test Cases for Middleware Logic ---
 	t.Run("fails without auth header", func(t *testing.T) {
@@ -114,7 +114,7 @@ func TestRequireRoleMiddleware(t *testing.T) {
 		// 2. Middleware passes, handler is called, which calls the repo
 		mockRepo.EXPECT().RevokeAllRefreshTokensByUserID(gomock.Any(), userID).Return(nil)
 
-		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/v1/user/%s/sessions", userID), nil)
+		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/v1/admin/user/%s/sessions", userID), nil)
 		req.Header.Set("Authorization", "Bearer admin-token")
 
 		resp, err := app.Test(req)
