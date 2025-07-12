@@ -54,7 +54,7 @@ cd auth-service
 - Create a PostgreSQL database named `porto_auth`.
 - Run the migrations in `/migrations`.
 
-3. **Create a **``** file** inside the `config/` directory:
+3. **Create a file** inside the `config/` directory:
 
 ```env
 PORT=8080
