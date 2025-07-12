@@ -10,6 +10,8 @@ func RegisterRoutes(app *fiber.App, h *AuthHandler) {
 	app.Post("api/v1/refresh", h.Refresh)
 	app.Delete("api/v1/session", h.Logout)
 
-	// Apply RequireRole middleware for admin-only endpoint
-	app.Delete("api/v1/user/:id/sessions", h.RequireRole("admin"), h.ForceLogout)
+	// Admin-only endpoints
+	admin := app.Group("/api/v1/admin", h.RequireRole("admin"))
+	admin.Delete("/user/:id/sessions", h.ForceLogout)
+	admin.Get("/users", h.GetAllUsers)
 }
