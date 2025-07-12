@@ -157,7 +157,7 @@ curl -X GET http://localhost:8080/api/v1/admin/users \
 
 ---
 
-### `DELETE /api/v1/user/:id/sessions`
+### `DELETE /api/v1/admin/user/:id/sessions`
 
 Revokes all active refresh tokens for a specific user **(Admin only)**.
 
