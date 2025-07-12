@@ -168,3 +168,12 @@ func (h *AuthHandler) RequireRole(requiredRole string) fiber.Handler {
 		return c.Next()
 	}
 }
+
+func (h *AuthHandler) GetAllUsers(c *fiber.Ctx) error {
+	users, err := h.userService.GetAllUsers(c.Context())
+	if err != nil {
+		return sendError(c, fiber.StatusInternalServerError, err)
+	}
+
+	return sendSuccess(c, fiber.StatusOK, users)
+}

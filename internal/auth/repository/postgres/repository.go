@@ -16,6 +16,7 @@ type Repository struct {
 
 type DBPool interface {
 	Exec(ctx context.Context, sql string, arguments ...interface{}) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row
 }
 
@@ -226,4 +227,41 @@ func (r *Repository) CountRecentFailedAttempts(ctx context.Context, email, ip st
 	}
 
 	return count, nil
+}
+
+func (r *Repository) GetAllUsers(ctx context.Context) ([]domain.User, error) {
+	query := `
+		SELECT u.id, u.email, u.role_id, r.name as role_name, u.created_at, u.updated_at
+		FROM users u
+		JOIN roles r ON u.role_id = r.id
+		ORDER BY u.created_at DESC;
+	`
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []domain.User
+	for rows.Next() {
+		var user domain.User
+		err := rows.Scan(
+			&user.ID,
+			&user.Email,
+			&user.RoleID,
+			&user.RoleName,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan user row: %w", err)
+		}
+		users = append(users, user)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over user rows: %w", err)
+	}
+
+	return users, nil
 }

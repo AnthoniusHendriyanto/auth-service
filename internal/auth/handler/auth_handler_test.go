@@ -2,6 +2,7 @@ package handler_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http/httptest"
@@ -248,5 +249,40 @@ func TestForceLogout(t *testing.T) {
 
 		resp, _ := app.Test(req, -1)
 		assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
+	})
+}
+
+func TestUserService_GetAllUsers(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := mocks.NewMockUserRepository(ctrl)
+	// We don't need tokenService or cfg for this specific test
+	s := service.NewUserService(mockRepo, nil, nil)
+
+	ctx := context.Background()
+
+	t.Run("success", func(t *testing.T) {
+		expectedUsers := []domain.User{
+			{ID: "user-1", Email: "test1@example.com"},
+			{ID: "user-2", Email: "test2@example.com"},
+		}
+		mockRepo.EXPECT().GetAllUsers(ctx).Return(expectedUsers, nil)
+
+		users, err := s.GetAllUsers(ctx)
+
+		assert.NoError(t, err)
+		assert.Equal(t, expectedUsers, users)
+	})
+
+	t.Run("error from repository", func(t *testing.T) {
+		expectedError := errors.New("repository error")
+		mockRepo.EXPECT().GetAllUsers(ctx).Return(nil, expectedError)
+
+		users, err := s.GetAllUsers(ctx)
+
+		assert.Error(t, err)
+		assert.Equal(t, expectedError, err)
+		assert.Nil(t, users)
 	})
 }

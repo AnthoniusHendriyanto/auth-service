@@ -440,3 +440,62 @@ func TestDeleteOldestByUserID(t *testing.T) {
 		assert.Contains(t, err.Error(), "failed to delete oldest refresh token")
 	})
 }
+
+// TestGetAllUsers covers the GetAllUsers repository method.
+func TestGetAllUsers(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mock.Close()
+
+	r := repo.NewPostgresRepository(mock)
+	ctx := context.Background()
+	columns := []string{"id", "email", "role_id", "role_name", "created_at", "updated_at"}
+
+	t.Run("success", func(t *testing.T) {
+		// Expected user data
+		now := time.Now()
+		expectedUsers := []domain.User{
+			{ID: "user-1", Email: "user1@example.com", RoleID: 1, RoleName: "user", CreatedAt: now, UpdatedAt: now},
+			{ID: "user-2", Email: "user2@example.com", RoleID: 2, RoleName: "admin", CreatedAt: now, UpdatedAt: now},
+		}
+
+		// Mock the query to return rows
+		rows := pgxmock.NewRows(columns).
+			AddRow(expectedUsers[0].ID, expectedUsers[0].Email, expectedUsers[0].RoleID, expectedUsers[0].RoleName, expectedUsers[0].CreatedAt, expectedUsers[0].UpdatedAt).
+			AddRow(expectedUsers[1].ID, expectedUsers[1].Email, expectedUsers[1].RoleID, expectedUsers[1].RoleName, expectedUsers[1].CreatedAt, expectedUsers[1].UpdatedAt)
+
+		mock.ExpectQuery("SELECT u.id, u.email, u.role_id").
+			WillReturnRows(rows)
+
+		users, err := r.GetAllUsers(ctx)
+		require.NoError(t, err)
+		assert.Len(t, users, 2)
+		assert.Equal(t, expectedUsers[0].Email, users[0].Email)
+		assert.Equal(t, expectedUsers[1].RoleName, users[1].RoleName)
+	})
+
+	t.Run("database error on query", func(t *testing.T) {
+		dbErr := fmt.Errorf("db error")
+		mock.ExpectQuery("SELECT u.id, u.email, u.role_id").
+			WillReturnError(dbErr)
+
+		users, err := r.GetAllUsers(ctx)
+		assert.Error(t, err)
+		assert.Nil(t, users)
+		assert.Contains(t, err.Error(), dbErr.Error())
+	})
+
+	t.Run("database error on row scan", func(t *testing.T) {
+		// Mock rows with a type mismatch to cause a scan error
+		rows := pgxmock.NewRows(columns).
+			AddRow("user-1", "user1@example.com", "not-an-int", "user", time.Now(), time.Now())
+
+		mock.ExpectQuery("SELECT u.id, u.email, u.role_id").
+			WillReturnRows(rows)
+
+		users, err := r.GetAllUsers(ctx)
+		assert.Error(t, err)
+		assert.Nil(t, users)
+		assert.Contains(t, err.Error(), "failed to scan user row")
+	})
+}

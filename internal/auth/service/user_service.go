@@ -210,3 +210,7 @@ func (s *UserService) GenerateAndStoreNewTokens(ctx context.Context, oldToken *d
 		ExpiresIn:    int(s.tokenService.GetAccessTokenExpiry().Seconds()),
 	}, nil
 }
+
+func (s *UserService) GetAllUsers(ctx context.Context) ([]domain.User, error) {
+	return s.repo.GetAllUsers(ctx)
+}

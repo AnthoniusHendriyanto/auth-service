@@ -93,6 +93,21 @@ func (mr *MockUserRepositoryMockRecorder) GetActiveCountByUserID(arg0, arg1 inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveCountByUserID", reflect.TypeOf((*MockUserRepository)(nil).GetActiveCountByUserID), arg0, arg1)
 }
 
+// GetAllUsers mocks base method.
+func (m *MockUserRepository) GetAllUsers(arg0 context.Context) ([]domain.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllUsers", arg0)
+	ret0, _ := ret[0].([]domain.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAllUsers indicates an expected call of GetAllUsers.
+func (mr *MockUserRepositoryMockRecorder) GetAllUsers(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllUsers", reflect.TypeOf((*MockUserRepository)(nil).GetAllUsers), arg0)
+}
+
 // GetByEmail mocks base method.
 func (m *MockUserRepository) GetByEmail(arg0 context.Context, arg1 string) (*domain.User, error) {
 	m.ctrl.T.Helper()

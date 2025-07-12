@@ -11,6 +11,7 @@ type UserManager interface {
 	GetByEmail(ctx context.Context, email string) (*User, error)
 	GetByIDWithRole(ctx context.Context, userID string) (*User, error)
 	Create(ctx context.Context, user *User) error
+	GetAllUsers(ctx context.Context) ([]User, error)
 }
 
 // RefreshTokenManager handles refresh token operations
