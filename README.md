@@ -19,6 +19,7 @@ A robust, modular authentication service for the Porto application ecosystem, bu
 - 🛡️ Role-Based Access Control: Middleware to enforce role-based access for specific endpoints.
 - 🔒 Brute-Force Protection: Limits login attempts from a single IP address to prevent brute-force attacks.
 - 🔄 CI Pipeline: Continuous integration pipeline to build, test, and scan the code for vulnerabilities and quality issues.
+- 📋 **Admin User Listing**: Admins can retrieve a list of all registered users.
 
 ---
 ## Architecture
@@ -72,8 +73,6 @@ go run cmd/main.go
 ```
 
 > Visit: `http://localhost:8080`
-
----
 
 ---
 
@@ -145,6 +144,19 @@ curl -X DELETE http://localhost:8080/api/v1/session \
 
 ---
 
+### `GET /api/v1/admin/users`
+
+Retrieves a list of all registered users **(Admin only)**.
+
+**Example Request:**
+
+```bash
+curl -X GET http://localhost:8080/api/v1/admin/users \
+-H "Authorization: Bearer your_admin_access_token"
+```
+
+---
+
 ### `DELETE /api/v1/user/:id/sessions`
 
 Revokes all active refresh tokens for a specific user **(Admin only)**.
@@ -204,7 +216,7 @@ go test ./... -coverprofile=coverage.out -covermode=atomic
 ---
 
 ## Upcoming Improvements
-1. Admin endpoints for user/session management (e.g. list users, revoke sessions)
+1. More admin dashboard features (e.g., updating user roles, viewing specific user sessions).
 2. Deployment to a cloud provider like GCP (e.g., Cloud Run, Cloud SQL, Secret Manager).
 3. A scheduled job (e.g., Cloud Scheduler) for cleaning up expired tokens from the database.
 
