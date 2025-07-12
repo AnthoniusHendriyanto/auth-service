@@ -263,7 +263,7 @@ func TestUserService_GetAllUsers(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
-		expectedUsers := []domain.User{
+		expectedUsers := []dto.UserOutput{
 			{ID: "user-1", Email: "test1@example.com"},
 			{ID: "user-2", Email: "test2@example.com"},
 		}

@@ -211,6 +211,6 @@ func (s *UserService) GenerateAndStoreNewTokens(ctx context.Context, oldToken *d
 	}, nil
 }
 
-func (s *UserService) GetAllUsers(ctx context.Context) ([]domain.User, error) {
+func (s *UserService) GetAllUsers(ctx context.Context) ([]dto.UserOutput, error) {
 	return s.repo.GetAllUsers(ctx)
 }

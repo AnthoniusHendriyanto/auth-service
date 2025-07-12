@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/AnthoniusHendriyanto/auth-service/internal/auth/domain"
+	"github.com/AnthoniusHendriyanto/auth-service/internal/auth/dto"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -229,7 +230,7 @@ func (r *Repository) CountRecentFailedAttempts(ctx context.Context, email, ip st
 	return count, nil
 }
 
-func (r *Repository) GetAllUsers(ctx context.Context) ([]domain.User, error) {
+func (r *Repository) GetAllUsers(ctx context.Context) ([]dto.UserOutput, error) {
 	query := `
 		SELECT u.id, u.email, u.role_id, r.name as role_name, u.created_at, u.updated_at
 		FROM users u
@@ -242,9 +243,9 @@ func (r *Repository) GetAllUsers(ctx context.Context) ([]domain.User, error) {
 	}
 	defer rows.Close()
 
-	var users []domain.User
+	var users []dto.UserOutput
 	for rows.Next() {
-		var user domain.User
+		var user dto.UserOutput
 		err := rows.Scan(
 			&user.ID,
 			&user.Email,

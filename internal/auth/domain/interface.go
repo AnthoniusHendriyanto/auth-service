@@ -2,6 +2,8 @@ package domain
 
 import (
 	"context"
+
+	"github.com/AnthoniusHendriyanto/auth-service/internal/auth/dto"
 )
 
 //go:generate mockgen -destination=../../mocks/mock_user_repository.go -package=mocks github.com/AnthoniusHendriyanto/auth-service/internal/auth/domain UserRepository
@@ -11,7 +13,7 @@ type UserManager interface {
 	GetByEmail(ctx context.Context, email string) (*User, error)
 	GetByIDWithRole(ctx context.Context, userID string) (*User, error)
 	Create(ctx context.Context, user *User) error
-	GetAllUsers(ctx context.Context) ([]User, error)
+	GetAllUsers(ctx context.Context) ([]dto.UserOutput, error)
 }
 
 // RefreshTokenManager handles refresh token operations

@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	domain "github.com/AnthoniusHendriyanto/auth-service/internal/auth/domain"
+	dto "github.com/AnthoniusHendriyanto/auth-service/internal/auth/dto"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -94,10 +95,10 @@ func (mr *MockUserRepositoryMockRecorder) GetActiveCountByUserID(arg0, arg1 inte
 }
 
 // GetAllUsers mocks base method.
-func (m *MockUserRepository) GetAllUsers(arg0 context.Context) ([]domain.User, error) {
+func (m *MockUserRepository) GetAllUsers(arg0 context.Context) ([]dto.UserOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAllUsers", arg0)
-	ret0, _ := ret[0].([]domain.User)
+	ret0, _ := ret[0].([]dto.UserOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

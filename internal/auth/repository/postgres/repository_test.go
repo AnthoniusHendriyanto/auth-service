@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/AnthoniusHendriyanto/auth-service/internal/auth/domain"
+	"github.com/AnthoniusHendriyanto/auth-service/internal/auth/dto"
 	repo "github.com/AnthoniusHendriyanto/auth-service/internal/auth/repository/postgres"
 	"github.com/jackc/pgx/v5"
 	"github.com/pashagolub/pgxmock/v3"
@@ -454,7 +455,7 @@ func TestGetAllUsers(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		// Expected user data
 		now := time.Now()
-		expectedUsers := []domain.User{
+		expectedUsers := []dto.UserOutput{
 			{ID: "user-1", Email: "user1@example.com", RoleID: 1, RoleName: "user", CreatedAt: now, UpdatedAt: now},
 			{ID: "user-2", Email: "user2@example.com", RoleID: 2, RoleName: "admin", CreatedAt: now, UpdatedAt: now},
 		}
