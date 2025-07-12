@@ -197,3 +197,17 @@ func (h *AuthHandler) UpdateUserRole(c *fiber.Ctx) error {
 		"message": "user role updated successfully",
 	})
 }
+
+func (h *AuthHandler) GetUserSessions(c *fiber.Ctx) error {
+	userID := c.Params("id")
+	if userID == "" {
+		return sendError(c, fiber.StatusBadRequest, errors.New("userID is required"))
+	}
+
+	sessions, err := h.userService.GetActiveSessionsByUserID(c.Context(), userID)
+	if err != nil {
+		return sendError(c, fiber.StatusInternalServerError, err)
+	}
+
+	return sendSuccess(c, fiber.StatusOK, sessions)
+}

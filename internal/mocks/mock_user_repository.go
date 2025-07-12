@@ -94,6 +94,21 @@ func (mr *MockUserRepositoryMockRecorder) GetActiveCountByUserID(arg0, arg1 inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveCountByUserID", reflect.TypeOf((*MockUserRepository)(nil).GetActiveCountByUserID), arg0, arg1)
 }
 
+// GetActiveSessionsByUserID mocks base method.
+func (m *MockUserRepository) GetActiveSessionsByUserID(arg0 context.Context, arg1 string) ([]domain.RefreshToken, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetActiveSessionsByUserID", arg0, arg1)
+	ret0, _ := ret[0].([]domain.RefreshToken)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetActiveSessionsByUserID indicates an expected call of GetActiveSessionsByUserID.
+func (mr *MockUserRepositoryMockRecorder) GetActiveSessionsByUserID(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveSessionsByUserID", reflect.TypeOf((*MockUserRepository)(nil).GetActiveSessionsByUserID), arg0, arg1)
+}
+
 // GetAllUsers mocks base method.
 func (m *MockUserRepository) GetAllUsers(arg0 context.Context) ([]dto.UserOutput, error) {
 	m.ctrl.T.Helper()

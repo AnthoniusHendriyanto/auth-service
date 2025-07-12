@@ -186,6 +186,18 @@ curl -X PATCH http://localhost:8080/api/v1/admin/user/user-id/role \
 ```
 
 ---
+### `GET /api/v1/admin/user/:id/sessions`
+
+Retrieves a list of all active sessions for a specific user **(Admin only)**.
+
+**Example Request:**
+
+```bash
+curl -X GET http://localhost:8080/api/v1/admin/user/user-id/sessions \
+-H "Authorization: Bearer your_admin_access_token"
+```
+
+---
 
 ## Running Tests
 
@@ -233,9 +245,8 @@ go test ./... -coverprofile=coverage.out -covermode=atomic
 ---
 
 ## Upcoming Improvements
-1. More admin dashboard features (e.g., viewing specific user sessions).
-2. Deployment to a cloud provider like GCP (e.g., Cloud Run, Cloud SQL, Secret Manager).
-3. A scheduled job (e.g., Cloud Scheduler) for cleaning up expired tokens from the database.
+1. Deployment to a cloud provider like GCP (e.g., Cloud Run, Cloud SQL, Secret Manager).
+2. A scheduled job (e.g., Cloud Scheduler) for cleaning up expired tokens from the database.
 
 ---
 

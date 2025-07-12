@@ -218,3 +218,24 @@ func (s *UserService) GetAllUsers(ctx context.Context) ([]dto.UserOutput, error)
 func (s *UserService) UpdateUserRole(ctx context.Context, userID string, roleID int) error {
 	return s.repo.UpdateUserRole(ctx, userID, roleID)
 }
+
+func (s *UserService) GetActiveSessionsByUserID(ctx context.Context, userID string) ([]dto.SessionOutput, error) {
+	sessions, err := s.repo.GetActiveSessionsByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var sessionOutputs []dto.SessionOutput
+	for _, session := range sessions {
+		sessionOutputs = append(sessionOutputs, dto.SessionOutput{
+			ID:                session.ID,
+			DeviceFingerprint: session.DeviceFingerprint,
+			IPAddress:         session.IPAddress,
+			UserAgent:         session.UserAgent,
+			CreatedAt:         session.CreatedAt,
+			ExpiresAt:         session.ExpiresAt,
+		})
+	}
+
+	return sessionOutputs, nil
+}

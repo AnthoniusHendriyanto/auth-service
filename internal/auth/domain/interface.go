@@ -25,6 +25,7 @@ type RefreshTokenManager interface {
 	GetActiveCountByUserID(ctx context.Context, userID string) (int, error)
 	DeleteOldestByUserID(ctx context.Context, userID string) error
 	RevokeAllRefreshTokensByUserID(ctx context.Context, userID string) error
+	GetActiveSessionsByUserID(ctx context.Context, userID string) ([]RefreshToken, error)
 }
 
 // SecurityAuditor handles security-related operations

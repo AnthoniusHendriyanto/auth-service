@@ -272,3 +272,43 @@ func (r *Repository) UpdateUserRole(ctx context.Context, userID string, roleID i
 	_, err := r.db.Exec(ctx, query, roleID, userID)
 	return err
 }
+
+func (r *Repository) GetActiveSessionsByUserID(ctx context.Context, userID string) ([]domain.RefreshToken, error) {
+	query := `
+		SELECT id, user_id, token, device_fingerprint, ip_address, user_agent, expires_at, created_at, revoked
+		FROM refresh_tokens
+		WHERE user_id = $1 AND revoked = FALSE AND expires_at > NOW()
+		ORDER BY created_at DESC
+	`
+	rows, err := r.db.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get active sessions: %w", err)
+	}
+	defer rows.Close()
+
+	var sessions []domain.RefreshToken
+	for rows.Next() {
+		var rt domain.RefreshToken
+		err := rows.Scan(
+			&rt.ID,
+			&rt.UserID,
+			&rt.Token,
+			&rt.DeviceFingerprint,
+			&rt.IPAddress,
+			&rt.UserAgent,
+			&rt.ExpiresAt,
+			&rt.CreatedAt,
+			&rt.Revoked,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan session row: %w", err)
+		}
+		sessions = append(sessions, rt)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over session rows: %w", err)
+	}
+
+	return sessions, nil
+}

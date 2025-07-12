@@ -528,3 +528,42 @@ func TestUpdateUserRole(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestGetActiveSessionsByUserID(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mock.Close()
+
+	r := repo.NewPostgresRepository(mock)
+	ctx := context.Background()
+	userID := "user-123"
+	columns := []string{"id", "user_id", "token", "device_fingerprint", "ip_address", "user_agent", "expires_at", "created_at", "revoked"}
+
+	t.Run("success", func(t *testing.T) {
+		now := time.Now()
+		rows := pgxmock.NewRows(columns).
+			AddRow("session-1", userID, "token-1", "fp-1", "1.1.1.1", "agent-1", now.Add(time.Hour), now, false).
+			AddRow("session-2", userID, "token-2", "fp-2", "2.2.2.2", "agent-2", now.Add(time.Hour), now, false)
+
+		mock.ExpectQuery("SELECT id, user_id").
+			WithArgs(userID).
+			WillReturnRows(rows)
+
+		sessions, err := r.GetActiveSessionsByUserID(ctx, userID)
+		require.NoError(t, err)
+		assert.Len(t, sessions, 2)
+		assert.Equal(t, "session-1", sessions[0].ID)
+	})
+
+	t.Run("database error", func(t *testing.T) {
+		dbErr := fmt.Errorf("db error")
+		mock.ExpectQuery("SELECT id, user_id").
+			WithArgs(userID).
+			WillReturnError(dbErr)
+
+		sessions, err := r.GetActiveSessionsByUserID(ctx, userID)
+		assert.Error(t, err)
+		assert.Nil(t, sessions)
+		assert.Contains(t, err.Error(), dbErr.Error())
+	})
+}

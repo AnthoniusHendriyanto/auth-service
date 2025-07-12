@@ -325,3 +325,43 @@ func TestUpdateUserRole(t *testing.T) {
 		assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
 	})
 }
+
+func TestGetUserSessions(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := mocks.NewMockUserRepository(ctrl)
+	userService := service.NewUserService(mockRepo, nil, &config.Config{})
+	authHandler := handler.NewAuthHandler(userService, nil)
+
+	app := fiber.New()
+	app.Get("/user/:id/sessions", authHandler.GetUserSessions)
+
+	t.Run("success", func(t *testing.T) {
+		userID := "user-123"
+		expectedSessions := []domain.RefreshToken{
+			{ID: "session-1"},
+		}
+		mockRepo.EXPECT().GetActiveSessionsByUserID(gomock.Any(), userID).Return(expectedSessions, nil)
+
+		req := httptest.NewRequest("GET", "/user/user-123/sessions", nil)
+
+		resp, _ := app.Test(req, -1)
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+		var response handler.Response
+		json.NewDecoder(resp.Body).Decode(&response)
+		assert.True(t, response.Success)
+		assert.NotEmpty(t, response.Data)
+	})
+
+	t.Run("internal server error", func(t *testing.T) {
+		userID := "user-123"
+		mockRepo.EXPECT().GetActiveSessionsByUserID(gomock.Any(), userID).Return(nil, errors.New("some error"))
+
+		req := httptest.NewRequest("GET", "/user/user-123/sessions", nil)
+
+		resp, _ := app.Test(req, -1)
+		assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
+	})
+}

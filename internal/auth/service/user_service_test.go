@@ -1169,3 +1169,39 @@ func TestUserService_UpdateUserRole_Error(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, expectedError, err)
 }
+
+func TestUserService_GetActiveSessionsByUserID(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := mocks.NewMockUserRepository(ctrl)
+	s := service.NewUserService(mockRepo, nil, nil)
+	ctx := context.Background()
+	userID := "user-123"
+
+	t.Run("success", func(t *testing.T) {
+		domainSessions := []domain.RefreshToken{
+			{ID: "session-1", DeviceFingerprint: "fp-1", IPAddress: "1.1.1.1"},
+			{ID: "session-2", DeviceFingerprint: "fp-2", IPAddress: "2.2.2.2"},
+		}
+		mockRepo.EXPECT().GetActiveSessionsByUserID(ctx, userID).Return(domainSessions, nil)
+
+		sessions, err := s.GetActiveSessionsByUserID(ctx, userID)
+
+		assert.NoError(t, err)
+		assert.Len(t, sessions, 2)
+		assert.Equal(t, "session-1", sessions[0].ID)
+		assert.Equal(t, "fp-2", sessions[1].DeviceFingerprint)
+	})
+
+	t.Run("error from repository", func(t *testing.T) {
+		expectedError := errors.New("repository error")
+		mockRepo.EXPECT().GetActiveSessionsByUserID(ctx, userID).Return(nil, expectedError)
+
+		sessions, err := s.GetActiveSessionsByUserID(ctx, userID)
+
+		assert.Error(t, err)
+		assert.Equal(t, expectedError, err)
+		assert.Nil(t, sessions)
+	})
+}

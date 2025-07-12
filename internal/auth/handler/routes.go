@@ -15,4 +15,5 @@ func RegisterRoutes(app *fiber.App, h *AuthHandler) {
 	admin.Delete("/user/:id/sessions", h.ForceLogout)
 	admin.Get("/users", h.GetAllUsers)
 	admin.Patch("/user/:id/role", h.UpdateUserRole)
+	admin.Get("/user/:id/sessions", h.GetUserSessions)
 }
