@@ -1133,3 +1133,39 @@ func TestUserService_GetAllUsers(t *testing.T) {
 		assert.Nil(t, users)
 	})
 }
+
+func TestUserService_UpdateUserRole_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := mocks.NewMockUserRepository(ctrl)
+	s := service.NewUserService(mockRepo, nil, &config.Config{})
+
+	userID := "user-123"
+	roleID := 2
+
+	mockRepo.EXPECT().UpdateUserRole(gomock.Any(), userID, roleID).Return(nil)
+
+	err := s.UpdateUserRole(context.Background(), userID, roleID)
+
+	assert.NoError(t, err)
+}
+
+func TestUserService_UpdateUserRole_Error(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := mocks.NewMockUserRepository(ctrl)
+	s := service.NewUserService(mockRepo, nil, &config.Config{})
+
+	userID := "user-123"
+	roleID := 2
+	expectedError := errors.New("database error")
+
+	mockRepo.EXPECT().UpdateUserRole(gomock.Any(), userID, roleID).Return(expectedError)
+
+	err := s.UpdateUserRole(context.Background(), userID, roleID)
+
+	assert.Error(t, err)
+	assert.Equal(t, expectedError, err)
+}

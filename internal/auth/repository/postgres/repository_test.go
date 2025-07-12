@@ -500,3 +500,31 @@ func TestGetAllUsers(t *testing.T) {
 		assert.Contains(t, err.Error(), "failed to scan user row")
 	})
 }
+
+func TestUpdateUserRole(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mock.Close()
+
+	r := repo.NewPostgresRepository(mock)
+	userID := "user-123"
+	roleID := 2
+
+	t.Run("success", func(t *testing.T) {
+		mock.ExpectExec("UPDATE users SET role_id").
+			WithArgs(roleID, userID).
+			WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+
+		err := r.UpdateUserRole(context.Background(), userID, roleID)
+		assert.NoError(t, err)
+	})
+
+	t.Run("database error", func(t *testing.T) {
+		mock.ExpectExec("UPDATE users SET role_id").
+			WithArgs(roleID, userID).
+			WillReturnError(fmt.Errorf("db error"))
+
+		err := r.UpdateUserRole(context.Background(), userID, roleID)
+		assert.Error(t, err)
+	})
+}

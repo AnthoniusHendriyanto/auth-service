@@ -177,3 +177,23 @@ func (h *AuthHandler) GetAllUsers(c *fiber.Ctx) error {
 
 	return sendSuccess(c, fiber.StatusOK, users)
 }
+
+func (h *AuthHandler) UpdateUserRole(c *fiber.Ctx) error {
+	userID := c.Params("id")
+	if userID == "" {
+		return sendError(c, fiber.StatusBadRequest, errors.New("userID is required"))
+	}
+
+	var input dto.UpdateRoleInput
+	if err := h.parseInput(c, &input); err != nil {
+		return sendError(c, fiber.StatusBadRequest, err)
+	}
+
+	if err := h.userService.UpdateUserRole(c.Context(), userID, input.RoleID); err != nil {
+		return sendError(c, fiber.StatusInternalServerError, err)
+	}
+
+	return sendSuccess(c, fiber.StatusOK, fiber.Map{
+		"message": "user role updated successfully",
+	})
+}

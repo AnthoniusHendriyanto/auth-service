@@ -210,6 +210,20 @@ func (mr *MockUserRepositoryMockRecorder) StoreRefreshToken(arg0, arg1 interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreRefreshToken", reflect.TypeOf((*MockUserRepository)(nil).StoreRefreshToken), arg0, arg1)
 }
 
+// UpdateUserRole mocks base method.
+func (m *MockUserRepository) UpdateUserRole(arg0 context.Context, arg1 string, arg2 int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateUserRole", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateUserRole indicates an expected call of UpdateUserRole.
+func (mr *MockUserRepositoryMockRecorder) UpdateUserRole(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUserRole", reflect.TypeOf((*MockUserRepository)(nil).UpdateUserRole), arg0, arg1, arg2)
+}
+
 // UpsertTrustedDevice mocks base method.
 func (m *MockUserRepository) UpsertTrustedDevice(arg0 context.Context, arg1, arg2, arg3, arg4 string) error {
 	m.ctrl.T.Helper()

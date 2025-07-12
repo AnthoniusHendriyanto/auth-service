@@ -169,6 +169,23 @@ curl -X DELETE http://localhost:8080/api/v1/user/user-id/sessions \
 ```
 
 ---
+### `PATCH /api/v1/admin/user/:id/role`
+
+Updates the role for a specific user **(Admin only)**.
+
+**Example Request:**
+
+```bash
+# To update a user to be an admin (role_id = 2)
+curl -X PATCH http://localhost:8080/api/v1/admin/user/user-id/role \
+-H "Authorization: Bearer your_admin_access_token" \
+-H "Content-Type: application/json" \
+-d '{
+  "role_id": 2
+}'
+```
+
+---
 
 ## Running Tests
 
@@ -216,7 +233,7 @@ go test ./... -coverprofile=coverage.out -covermode=atomic
 ---
 
 ## Upcoming Improvements
-1. More admin dashboard features (e.g., updating user roles, viewing specific user sessions).
+1. More admin dashboard features (e.g., viewing specific user sessions).
 2. Deployment to a cloud provider like GCP (e.g., Cloud Run, Cloud SQL, Secret Manager).
 3. A scheduled job (e.g., Cloud Scheduler) for cleaning up expired tokens from the database.
 

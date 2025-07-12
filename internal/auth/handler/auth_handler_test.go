@@ -286,3 +286,42 @@ func TestUserService_GetAllUsers(t *testing.T) {
 		assert.Nil(t, users)
 	})
 }
+
+func TestUpdateUserRole(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := mocks.NewMockUserRepository(ctrl)
+	userService := service.NewUserService(mockRepo, nil, &config.Config{})
+	authHandler := handler.NewAuthHandler(userService, nil)
+
+	app := fiber.New()
+	app.Put("/user/:id/role", authHandler.UpdateUserRole)
+
+	t.Run("success", func(t *testing.T) {
+		userID := "user-123"
+		input := dto.UpdateRoleInput{RoleID: 2}
+
+		mockRepo.EXPECT().UpdateUserRole(gomock.Any(), userID, input.RoleID).Return(nil)
+
+		body, _ := json.Marshal(input)
+		req := httptest.NewRequest("PUT", "/user/user-123/role", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, _ := app.Test(req, -1)
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+	})
+
+	t.Run("internal server error", func(t *testing.T) {
+		userID := "user-123"
+		input := dto.UpdateRoleInput{RoleID: 2}
+		mockRepo.EXPECT().UpdateUserRole(gomock.Any(), userID, input.RoleID).Return(errors.New("some error"))
+
+		body, _ := json.Marshal(input)
+		req := httptest.NewRequest("PUT", "/user/user-123/role", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, _ := app.Test(req, -1)
+		assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
+	})
+}

@@ -214,3 +214,7 @@ func (s *UserService) GenerateAndStoreNewTokens(ctx context.Context, oldToken *d
 func (s *UserService) GetAllUsers(ctx context.Context) ([]dto.UserOutput, error) {
 	return s.repo.GetAllUsers(ctx)
 }
+
+func (s *UserService) UpdateUserRole(ctx context.Context, userID string, roleID int) error {
+	return s.repo.UpdateUserRole(ctx, userID, roleID)
+}

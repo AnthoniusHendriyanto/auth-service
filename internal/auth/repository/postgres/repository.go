@@ -266,3 +266,9 @@ func (r *Repository) GetAllUsers(ctx context.Context) ([]dto.UserOutput, error) 
 
 	return users, nil
 }
+
+func (r *Repository) UpdateUserRole(ctx context.Context, userID string, roleID int) error {
+	query := `UPDATE users SET role_id = $1, updated_at = now() WHERE id = $2`
+	_, err := r.db.Exec(ctx, query, roleID, userID)
+	return err
+}

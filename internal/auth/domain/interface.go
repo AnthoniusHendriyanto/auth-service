@@ -14,6 +14,7 @@ type UserManager interface {
 	GetByIDWithRole(ctx context.Context, userID string) (*User, error)
 	Create(ctx context.Context, user *User) error
 	GetAllUsers(ctx context.Context) ([]dto.UserOutput, error)
+	UpdateUserRole(ctx context.Context, userID string, roleID int) error
 }
 
 // RefreshTokenManager handles refresh token operations
