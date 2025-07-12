@@ -5,6 +5,6 @@ profile:
 include:
   - name: CheckDependencyLicenses
 exclude:
-  - name: All Go test files
+  - name: All
     paths:
       - "**/*_test.go"
