@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
 
 	domain "github.com/AnthoniusHendriyanto/auth-service/internal/auth/domain"
@@ -35,174 +36,174 @@ func (m *MockUserRepository) EXPECT() *MockUserRepositoryMockRecorder {
 }
 
 // CountRecentFailedAttempts mocks base method.
-func (m *MockUserRepository) CountRecentFailedAttempts(arg0, arg1 string, arg2 int) (int, error) {
+func (m *MockUserRepository) CountRecentFailedAttempts(arg0 context.Context, arg1, arg2 string, arg3 int) (int, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CountRecentFailedAttempts", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "CountRecentFailedAttempts", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(int)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CountRecentFailedAttempts indicates an expected call of CountRecentFailedAttempts.
-func (mr *MockUserRepositoryMockRecorder) CountRecentFailedAttempts(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockUserRepositoryMockRecorder) CountRecentFailedAttempts(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountRecentFailedAttempts", reflect.TypeOf((*MockUserRepository)(nil).CountRecentFailedAttempts), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountRecentFailedAttempts", reflect.TypeOf((*MockUserRepository)(nil).CountRecentFailedAttempts), arg0, arg1, arg2, arg3)
 }
 
 // Create mocks base method.
-func (m *MockUserRepository) Create(arg0 *domain.User) error {
+func (m *MockUserRepository) Create(arg0 context.Context, arg1 *domain.User) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0)
+	ret := m.ctrl.Call(m, "Create", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockUserRepositoryMockRecorder) Create(arg0 interface{}) *gomock.Call {
+func (mr *MockUserRepositoryMockRecorder) Create(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockUserRepository)(nil).Create), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockUserRepository)(nil).Create), arg0, arg1)
 }
 
 // DeleteOldestByUserID mocks base method.
-func (m *MockUserRepository) DeleteOldestByUserID(arg0 string) error {
+func (m *MockUserRepository) DeleteOldestByUserID(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteOldestByUserID", arg0)
+	ret := m.ctrl.Call(m, "DeleteOldestByUserID", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteOldestByUserID indicates an expected call of DeleteOldestByUserID.
-func (mr *MockUserRepositoryMockRecorder) DeleteOldestByUserID(arg0 interface{}) *gomock.Call {
+func (mr *MockUserRepositoryMockRecorder) DeleteOldestByUserID(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOldestByUserID", reflect.TypeOf((*MockUserRepository)(nil).DeleteOldestByUserID), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOldestByUserID", reflect.TypeOf((*MockUserRepository)(nil).DeleteOldestByUserID), arg0, arg1)
 }
 
 // GetActiveCountByUserID mocks base method.
-func (m *MockUserRepository) GetActiveCountByUserID(arg0 string) (int, error) {
+func (m *MockUserRepository) GetActiveCountByUserID(arg0 context.Context, arg1 string) (int, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetActiveCountByUserID", arg0)
+	ret := m.ctrl.Call(m, "GetActiveCountByUserID", arg0, arg1)
 	ret0, _ := ret[0].(int)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetActiveCountByUserID indicates an expected call of GetActiveCountByUserID.
-func (mr *MockUserRepositoryMockRecorder) GetActiveCountByUserID(arg0 interface{}) *gomock.Call {
+func (mr *MockUserRepositoryMockRecorder) GetActiveCountByUserID(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveCountByUserID", reflect.TypeOf((*MockUserRepository)(nil).GetActiveCountByUserID), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveCountByUserID", reflect.TypeOf((*MockUserRepository)(nil).GetActiveCountByUserID), arg0, arg1)
 }
 
 // GetByEmail mocks base method.
-func (m *MockUserRepository) GetByEmail(arg0 string) (*domain.User, error) {
+func (m *MockUserRepository) GetByEmail(arg0 context.Context, arg1 string) (*domain.User, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByEmail", arg0)
+	ret := m.ctrl.Call(m, "GetByEmail", arg0, arg1)
 	ret0, _ := ret[0].(*domain.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetByEmail indicates an expected call of GetByEmail.
-func (mr *MockUserRepositoryMockRecorder) GetByEmail(arg0 interface{}) *gomock.Call {
+func (mr *MockUserRepositoryMockRecorder) GetByEmail(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByEmail", reflect.TypeOf((*MockUserRepository)(nil).GetByEmail), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByEmail", reflect.TypeOf((*MockUserRepository)(nil).GetByEmail), arg0, arg1)
 }
 
 // GetByIDWithRole mocks base method.
-func (m *MockUserRepository) GetByIDWithRole(arg0 string) (*domain.User, error) {
+func (m *MockUserRepository) GetByIDWithRole(arg0 context.Context, arg1 string) (*domain.User, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByIDWithRole", arg0)
+	ret := m.ctrl.Call(m, "GetByIDWithRole", arg0, arg1)
 	ret0, _ := ret[0].(*domain.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetByIDWithRole indicates an expected call of GetByIDWithRole.
-func (mr *MockUserRepositoryMockRecorder) GetByIDWithRole(arg0 interface{}) *gomock.Call {
+func (mr *MockUserRepositoryMockRecorder) GetByIDWithRole(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDWithRole", reflect.TypeOf((*MockUserRepository)(nil).GetByIDWithRole), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDWithRole", reflect.TypeOf((*MockUserRepository)(nil).GetByIDWithRole), arg0, arg1)
 }
 
 // GetRefreshToken mocks base method.
-func (m *MockUserRepository) GetRefreshToken(arg0 string) (*domain.RefreshToken, error) {
+func (m *MockUserRepository) GetRefreshToken(arg0 context.Context, arg1 string) (*domain.RefreshToken, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRefreshToken", arg0)
+	ret := m.ctrl.Call(m, "GetRefreshToken", arg0, arg1)
 	ret0, _ := ret[0].(*domain.RefreshToken)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetRefreshToken indicates an expected call of GetRefreshToken.
-func (mr *MockUserRepositoryMockRecorder) GetRefreshToken(arg0 interface{}) *gomock.Call {
+func (mr *MockUserRepositoryMockRecorder) GetRefreshToken(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRefreshToken", reflect.TypeOf((*MockUserRepository)(nil).GetRefreshToken), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRefreshToken", reflect.TypeOf((*MockUserRepository)(nil).GetRefreshToken), arg0, arg1)
 }
 
 // RecordLoginAttempt mocks base method.
-func (m *MockUserRepository) RecordLoginAttempt(arg0, arg1 string, arg2 bool) error {
+func (m *MockUserRepository) RecordLoginAttempt(arg0 context.Context, arg1, arg2 string, arg3 bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RecordLoginAttempt", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "RecordLoginAttempt", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RecordLoginAttempt indicates an expected call of RecordLoginAttempt.
-func (mr *MockUserRepositoryMockRecorder) RecordLoginAttempt(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockUserRepositoryMockRecorder) RecordLoginAttempt(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordLoginAttempt", reflect.TypeOf((*MockUserRepository)(nil).RecordLoginAttempt), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordLoginAttempt", reflect.TypeOf((*MockUserRepository)(nil).RecordLoginAttempt), arg0, arg1, arg2, arg3)
 }
 
 // RevokeAllRefreshTokensByUserID mocks base method.
-func (m *MockUserRepository) RevokeAllRefreshTokensByUserID(arg0 string) error {
+func (m *MockUserRepository) RevokeAllRefreshTokensByUserID(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RevokeAllRefreshTokensByUserID", arg0)
+	ret := m.ctrl.Call(m, "RevokeAllRefreshTokensByUserID", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RevokeAllRefreshTokensByUserID indicates an expected call of RevokeAllRefreshTokensByUserID.
-func (mr *MockUserRepositoryMockRecorder) RevokeAllRefreshTokensByUserID(arg0 interface{}) *gomock.Call {
+func (mr *MockUserRepositoryMockRecorder) RevokeAllRefreshTokensByUserID(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeAllRefreshTokensByUserID", reflect.TypeOf((*MockUserRepository)(nil).RevokeAllRefreshTokensByUserID), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeAllRefreshTokensByUserID", reflect.TypeOf((*MockUserRepository)(nil).RevokeAllRefreshTokensByUserID), arg0, arg1)
 }
 
 // RevokeRefreshToken mocks base method.
-func (m *MockUserRepository) RevokeRefreshToken(arg0 string) error {
+func (m *MockUserRepository) RevokeRefreshToken(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RevokeRefreshToken", arg0)
+	ret := m.ctrl.Call(m, "RevokeRefreshToken", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RevokeRefreshToken indicates an expected call of RevokeRefreshToken.
-func (mr *MockUserRepositoryMockRecorder) RevokeRefreshToken(arg0 interface{}) *gomock.Call {
+func (mr *MockUserRepositoryMockRecorder) RevokeRefreshToken(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeRefreshToken", reflect.TypeOf((*MockUserRepository)(nil).RevokeRefreshToken), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeRefreshToken", reflect.TypeOf((*MockUserRepository)(nil).RevokeRefreshToken), arg0, arg1)
 }
 
 // StoreRefreshToken mocks base method.
-func (m *MockUserRepository) StoreRefreshToken(arg0 *domain.RefreshToken) error {
+func (m *MockUserRepository) StoreRefreshToken(arg0 context.Context, arg1 *domain.RefreshToken) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StoreRefreshToken", arg0)
+	ret := m.ctrl.Call(m, "StoreRefreshToken", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // StoreRefreshToken indicates an expected call of StoreRefreshToken.
-func (mr *MockUserRepositoryMockRecorder) StoreRefreshToken(arg0 interface{}) *gomock.Call {
+func (mr *MockUserRepositoryMockRecorder) StoreRefreshToken(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreRefreshToken", reflect.TypeOf((*MockUserRepository)(nil).StoreRefreshToken), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreRefreshToken", reflect.TypeOf((*MockUserRepository)(nil).StoreRefreshToken), arg0, arg1)
 }
 
 // UpsertTrustedDevice mocks base method.
-func (m *MockUserRepository) UpsertTrustedDevice(arg0, arg1, arg2, arg3 string) error {
+func (m *MockUserRepository) UpsertTrustedDevice(arg0 context.Context, arg1, arg2, arg3, arg4 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpsertTrustedDevice", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "UpsertTrustedDevice", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpsertTrustedDevice indicates an expected call of UpsertTrustedDevice.
-func (mr *MockUserRepositoryMockRecorder) UpsertTrustedDevice(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockUserRepositoryMockRecorder) UpsertTrustedDevice(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertTrustedDevice", reflect.TypeOf((*MockUserRepository)(nil).UpsertTrustedDevice), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertTrustedDevice", reflect.TypeOf((*MockUserRepository)(nil).UpsertTrustedDevice), arg0, arg1, arg2, arg3, arg4)
 }

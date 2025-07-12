@@ -1,6 +1,7 @@
 package postgres_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -25,13 +26,16 @@ func TestGetByEmail(t *testing.T) {
 	userEmail := "test@example.com"
 	expectedUser := &domain.User{ID: "user-123", Email: userEmail}
 
+	// Define a context to use in the tests
+	ctx := context.Background()
+
 	t.Run("success", func(t *testing.T) {
 		mock.ExpectQuery("SELECT u.id, u.email").
 			WithArgs(userEmail).
 			WillReturnRows(pgxmock.NewRows(columns).
 				AddRow(expectedUser.ID, expectedUser.Email, "hash", 1, "user", time.Now(), time.Now()))
 
-		user, err := r.GetByEmail(userEmail)
+		user, err := r.GetByEmail(ctx, userEmail)
 		require.NoError(t, err)
 		assert.Equal(t, expectedUser.ID, user.ID)
 	})
@@ -41,7 +45,7 @@ func TestGetByEmail(t *testing.T) {
 			WithArgs(userEmail).
 			WillReturnError(pgx.ErrNoRows)
 
-		user, err := r.GetByEmail(userEmail)
+		user, err := r.GetByEmail(ctx, userEmail)
 		require.NoError(t, err) // Should return nil user, nil error
 		assert.Nil(t, user)
 	})
@@ -51,7 +55,7 @@ func TestGetByEmail(t *testing.T) {
 			WithArgs(userEmail).
 			WillReturnError(fmt.Errorf("db error"))
 
-		_, err := r.GetByEmail(userEmail)
+		_, err := r.GetByEmail(ctx, userEmail)
 		assert.Error(t, err)
 	})
 }
@@ -61,6 +65,9 @@ func TestCreate(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
+
+	// Define a context to use in the tests
+	ctx := context.Background()
 
 	r := repo.NewPostgresRepository(mock)
 	userToCreate := &domain.User{
@@ -76,7 +83,7 @@ func TestCreate(t *testing.T) {
 			WithArgs(userToCreate.ID, userToCreate.Email, userToCreate.PasswordHash, userToCreate.CreatedAt, userToCreate.UpdatedAt).
 			WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
-		err := r.Create(userToCreate)
+		err := r.Create(ctx, userToCreate)
 		assert.NoError(t, err)
 	})
 
@@ -85,7 +92,7 @@ func TestCreate(t *testing.T) {
 			WithArgs(userToCreate.ID, userToCreate.Email, userToCreate.PasswordHash, userToCreate.CreatedAt, userToCreate.UpdatedAt).
 			WillReturnError(fmt.Errorf("db error"))
 
-		err := r.Create(userToCreate)
+		err := r.Create(ctx, userToCreate)
 		assert.Error(t, err)
 	})
 }
@@ -96,6 +103,9 @@ func TestStoreRefreshToken(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
+	// Define a context to use in the tests
+	ctx := context.Background()
+
 	r := repo.NewPostgresRepository(mock)
 	rt := &domain.RefreshToken{ID: "rt-123", UserID: "user-123", Token: "token"}
 
@@ -104,7 +114,7 @@ func TestStoreRefreshToken(t *testing.T) {
 			WithArgs(rt.ID, rt.UserID, rt.Token, rt.DeviceFingerprint, rt.IPAddress, rt.UserAgent, rt.ExpiresAt, rt.CreatedAt, rt.Revoked).
 			WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
-		err := r.StoreRefreshToken(rt)
+		err := r.StoreRefreshToken(ctx, rt)
 		assert.NoError(t, err)
 	})
 
@@ -113,7 +123,7 @@ func TestStoreRefreshToken(t *testing.T) {
 			WithArgs(rt.ID, rt.UserID, rt.Token, rt.DeviceFingerprint, rt.IPAddress, rt.UserAgent, rt.ExpiresAt, rt.CreatedAt, rt.Revoked).
 			WillReturnError(fmt.Errorf("db error"))
 
-		err := r.StoreRefreshToken(rt)
+		err := r.StoreRefreshToken(ctx, rt)
 		assert.Error(t, err)
 	})
 }
@@ -123,6 +133,9 @@ func TestGetRefreshToken(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
+
+	// Define a context to use in the tests
+	ctx := context.Background()
 
 	r := repo.NewPostgresRepository(mock)
 	columns := []string{"id", "user_id", "token", "device_fingerprint", "ip_address", "user_agent", "expires_at", "created_at", "revoked"}
@@ -135,7 +148,7 @@ func TestGetRefreshToken(t *testing.T) {
 			WillReturnRows(pgxmock.NewRows(columns).
 				AddRow(expectedRT.ID, "uid", expectedRT.Token, "", "", "", time.Now(), time.Now(), false))
 
-		rt, err := r.GetRefreshToken(tokenString)
+		rt, err := r.GetRefreshToken(ctx, tokenString)
 		require.NoError(t, err)
 		assert.Equal(t, expectedRT.ID, rt.ID)
 	})
@@ -145,7 +158,7 @@ func TestGetRefreshToken(t *testing.T) {
 			WithArgs(tokenString).
 			WillReturnError(pgx.ErrNoRows)
 
-		rt, err := r.GetRefreshToken(tokenString)
+		rt, err := r.GetRefreshToken(ctx, tokenString)
 		require.NoError(t, err)
 		assert.Nil(t, rt)
 	})
@@ -157,7 +170,7 @@ func TestGetRefreshToken(t *testing.T) {
 			WithArgs(tokenString).
 			WillReturnError(dbError) // Simulate the error
 
-		rt, err := r.GetRefreshToken(tokenString)
+		rt, err := r.GetRefreshToken(ctx, tokenString)
 
 		// Assert that the error is the one we simulated and the token is nil
 		require.Error(t, err)
@@ -172,6 +185,9 @@ func TestRevokeRefreshToken(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
+	// Define a context to use in the tests
+	ctx := context.Background()
+
 	r := repo.NewPostgresRepository(mock)
 	tokenID := "token-to-revoke"
 
@@ -180,7 +196,7 @@ func TestRevokeRefreshToken(t *testing.T) {
 			WithArgs(tokenID).
 			WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 
-		err := r.RevokeRefreshToken(tokenID)
+		err := r.RevokeRefreshToken(ctx, tokenID)
 		assert.NoError(t, err)
 	})
 }
@@ -196,13 +212,16 @@ func TestCountRecentFailedAttempts(t *testing.T) {
 	ip := "127.0.0.1"
 	minutes := 15
 
+	// Define a context to use in the tests
+	ctx := context.Background()
+
 	t.Run("success", func(t *testing.T) {
 		expectedCount := 5
 		mock.ExpectQuery("SELECT COUNT").
 			WithArgs(email, ip).
 			WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(expectedCount))
 
-		count, err := r.CountRecentFailedAttempts(email, ip, minutes)
+		count, err := r.CountRecentFailedAttempts(ctx, email, ip, minutes)
 		require.NoError(t, err)
 		assert.Equal(t, expectedCount, count)
 	})
@@ -212,7 +231,7 @@ func TestCountRecentFailedAttempts(t *testing.T) {
 			WithArgs(email, ip).
 			WillReturnError(fmt.Errorf("db error"))
 
-		_, err := r.CountRecentFailedAttempts(email, ip, minutes)
+		_, err := r.CountRecentFailedAttempts(ctx, email, ip, minutes)
 		assert.Error(t, err)
 	})
 }
@@ -226,11 +245,14 @@ func TestRevokeAllRefreshTokensByUserID(t *testing.T) {
 	repository := repo.NewPostgresRepository(mock)
 	userID := "user-to-logout"
 
+	// Define a context to use in the tests
+	ctx := context.Background()
+
 	mock.ExpectExec("UPDATE refresh_tokens SET revoked = TRUE WHERE user_id = \\$1 AND revoked = FALSE").
 		WithArgs(userID).
 		WillReturnResult(pgxmock.NewResult("UPDATE", 5)) // Assume 5 tokens were revoked
 
-	err = repository.RevokeAllRefreshTokensByUserID(userID)
+	err = repository.RevokeAllRefreshTokensByUserID(ctx, userID)
 	require.NoError(t, err)
 
 	// You can also test the error case
@@ -238,7 +260,7 @@ func TestRevokeAllRefreshTokensByUserID(t *testing.T) {
 		WithArgs(userID).
 		WillReturnError(fmt.Errorf("db error"))
 
-	err = repository.RevokeAllRefreshTokensByUserID(userID)
+	err = repository.RevokeAllRefreshTokensByUserID(ctx, userID)
 	require.Error(t, err)
 }
 
@@ -247,6 +269,9 @@ func TestGetByIDWithRole(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
+
+	// Define a context to use in the tests
+	ctx := context.Background()
 
 	r := repo.NewPostgresRepository(mock)
 	columns := []string{"id", "email", "password_hash", "role_id", "role_name", "created_at", "updated_at"}
@@ -259,7 +284,7 @@ func TestGetByIDWithRole(t *testing.T) {
 			WillReturnRows(pgxmock.NewRows(columns).
 				AddRow(expectedUser.ID, "admin@example.com", "hash", 2, "admin", time.Now(), time.Now()))
 
-		user, err := r.GetByIDWithRole(userID)
+		user, err := r.GetByIDWithRole(ctx, userID)
 		require.NoError(t, err)
 		assert.Equal(t, expectedUser.ID, user.ID)
 		assert.Equal(t, "admin", user.RoleName)
@@ -270,7 +295,7 @@ func TestGetByIDWithRole(t *testing.T) {
 			WithArgs(userID).
 			WillReturnError(pgx.ErrNoRows)
 
-		user, err := r.GetByIDWithRole(userID)
+		user, err := r.GetByIDWithRole(ctx, userID)
 		require.NoError(t, err)
 		assert.Nil(t, user)
 	})
@@ -280,7 +305,7 @@ func TestGetByIDWithRole(t *testing.T) {
 			WithArgs(userID).
 			WillReturnError(fmt.Errorf("db error"))
 
-		_, err := r.GetByIDWithRole(userID)
+		_, err := r.GetByIDWithRole(ctx, userID)
 		assert.Error(t, err)
 	})
 }
@@ -291,6 +316,9 @@ func TestRecordLoginAttempt(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
+	// Define a context to use in the tests
+	ctx := context.Background()
+
 	r := repo.NewPostgresRepository(mock)
 	email := "test@example.com"
 	ip := "127.0.0.1"
@@ -300,7 +328,7 @@ func TestRecordLoginAttempt(t *testing.T) {
 			WithArgs(email, ip, true).
 			WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
-		err := r.RecordLoginAttempt(email, ip, true)
+		err := r.RecordLoginAttempt(ctx, email, ip, true)
 		assert.NoError(t, err)
 	})
 
@@ -309,7 +337,7 @@ func TestRecordLoginAttempt(t *testing.T) {
 			WithArgs(email, ip, false).
 			WillReturnError(fmt.Errorf("db error"))
 
-		err := r.RecordLoginAttempt(email, ip, false)
+		err := r.RecordLoginAttempt(ctx, email, ip, false)
 		assert.Error(t, err)
 	})
 }
@@ -319,6 +347,9 @@ func TestUpsertTrustedDevice(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
+
+	// Define a context to use in the tests
+	ctx := context.Background()
 
 	r := repo.NewPostgresRepository(mock)
 	userID := "user-123"
@@ -331,7 +362,7 @@ func TestUpsertTrustedDevice(t *testing.T) {
 			WithArgs(userID, fingerprint, userAgent, ip).
 			WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
-		err := r.UpsertTrustedDevice(userID, fingerprint, userAgent, ip)
+		err := r.UpsertTrustedDevice(ctx, userID, fingerprint, userAgent, ip)
 		assert.NoError(t, err)
 	})
 
@@ -340,7 +371,7 @@ func TestUpsertTrustedDevice(t *testing.T) {
 			WithArgs(userID, fingerprint, userAgent, ip).
 			WillReturnError(fmt.Errorf("db error"))
 
-		err := r.UpsertTrustedDevice(userID, fingerprint, userAgent, ip)
+		err := r.UpsertTrustedDevice(ctx, userID, fingerprint, userAgent, ip)
 		assert.Error(t, err)
 	})
 }
@@ -351,6 +382,9 @@ func TestGetActiveCountByUserID(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
+	// Define a context to use in the tests
+	ctx := context.Background()
+
 	r := repo.NewPostgresRepository(mock)
 	userID := "user-123"
 
@@ -360,7 +394,7 @@ func TestGetActiveCountByUserID(t *testing.T) {
 			WithArgs(userID).
 			WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(expectedCount))
 
-		count, err := r.GetActiveCountByUserID(userID)
+		count, err := r.GetActiveCountByUserID(ctx, userID)
 		require.NoError(t, err)
 		assert.Equal(t, expectedCount, count)
 	})
@@ -370,7 +404,7 @@ func TestGetActiveCountByUserID(t *testing.T) {
 			WithArgs(userID).
 			WillReturnError(fmt.Errorf("db error"))
 
-		_, err := r.GetActiveCountByUserID(userID)
+		_, err := r.GetActiveCountByUserID(ctx, userID)
 		assert.Error(t, err)
 	})
 }
@@ -381,6 +415,9 @@ func TestDeleteOldestByUserID(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
+	// Define a context to use in the tests
+	ctx := context.Background()
+
 	r := repo.NewPostgresRepository(mock)
 	userID := "user-123"
 
@@ -389,7 +426,7 @@ func TestDeleteOldestByUserID(t *testing.T) {
 			WithArgs(userID).
 			WillReturnResult(pgxmock.NewResult("DELETE", 1))
 
-		err := r.DeleteOldestByUserID(userID)
+		err := r.DeleteOldestByUserID(ctx, userID)
 		assert.NoError(t, err)
 	})
 
@@ -398,7 +435,7 @@ func TestDeleteOldestByUserID(t *testing.T) {
 			WithArgs(userID).
 			WillReturnError(fmt.Errorf("db error"))
 
-		err := r.DeleteOldestByUserID(userID)
+		err := r.DeleteOldestByUserID(ctx, userID)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to delete oldest refresh token")
 	})

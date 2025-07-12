@@ -35,8 +35,8 @@ func TestRegister(t *testing.T) {
 		input := dto.RegisterInput{Email: "test@example.com", Password: "password"}
 		// expectedUser := &domain.User{ID: "123", Email: "test@example.com"}
 
-		mockRepo.EXPECT().GetByEmail(input.Email).Return(nil, nil)
-		mockRepo.EXPECT().Create(gomock.Any()).Return(nil)
+		mockRepo.EXPECT().GetByEmail(gomock.Any(), input.Email).Return(nil, nil)
+		mockRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 
 		body, _ := json.Marshal(input)
 		req := httptest.NewRequest("POST", "/register", bytes.NewReader(body))
@@ -56,8 +56,8 @@ func TestRegister(t *testing.T) {
 
 	t.Run("registration failure", func(t *testing.T) {
 		input := dto.RegisterInput{Email: "test@example.com", Password: "password"}
-		mockRepo.EXPECT().GetByEmail(input.Email).Return(nil, nil)
-		mockRepo.EXPECT().Create(gomock.Any()).Return(errors.New("registration failed"))
+		mockRepo.EXPECT().GetByEmail(gomock.Any(), input.Email).Return(nil, nil)
+		mockRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(errors.New("registration failed"))
 
 		body, _ := json.Marshal(input)
 		req := httptest.NewRequest("POST", "/register", bytes.NewReader(body))
@@ -97,10 +97,10 @@ func TestLogin(t *testing.T) {
 		expectedIP := "0.0.0.0"
 
 		// Mock expectations for a failed password attempt
-		mockRepo.EXPECT().CountRecentFailedAttempts(input.Email, expectedIP, cfg.MaxActiveRefreshTokens).Return(0, nil)
-		mockRepo.EXPECT().GetByEmail(input.Email).Return(user, nil)
+		mockRepo.EXPECT().CountRecentFailedAttempts(gomock.Any(), input.Email, expectedIP, cfg.MaxActiveRefreshTokens).Return(0, nil)
+		mockRepo.EXPECT().GetByEmail(gomock.Any(), input.Email).Return(user, nil)
 		// Since password fails, the next call is to record a failed attempt
-		mockRepo.EXPECT().RecordLoginAttempt(input.Email, expectedIP, false).Return(nil)
+		mockRepo.EXPECT().RecordLoginAttempt(gomock.Any(), input.Email, expectedIP, false).Return(nil)
 
 		body, _ := json.Marshal(input)
 		req := httptest.NewRequest("POST", "/login", bytes.NewReader(body))
@@ -115,7 +115,8 @@ func TestLogin(t *testing.T) {
 		expectedIP := "0.0.0.0"
 
 		// Mock CountRecentFailedAttempts to return a value >= LoginMaxAttempts
-		mockRepo.EXPECT().CountRecentFailedAttempts(input.Email, expectedIP, cfg.MaxActiveRefreshTokens).Return(cfg.LoginMaxAttempts, nil)
+		mockRepo.EXPECT().CountRecentFailedAttempts(gomock.Any(), input.Email, expectedIP,
+			cfg.MaxActiveRefreshTokens).Return(cfg.LoginMaxAttempts, nil)
 
 		body, _ := json.Marshal(input)
 		req := httptest.NewRequest("POST", "/login", bytes.NewReader(body))
@@ -152,12 +153,12 @@ func TestRefresh(t *testing.T) {
 		refreshToken := &domain.RefreshToken{DeviceFingerprint: "", ExpiresAt: time.Now().Add(time.Hour)}
 
 		// Expectations
-		mockRepo.EXPECT().GetRefreshToken(input.RefreshToken).Return(refreshToken, nil)
-		mockRepo.EXPECT().RevokeRefreshToken(gomock.Any()).Return(nil)
-		mockRepo.EXPECT().GetByIDWithRole(gomock.Any()).Return(&domain.User{}, nil)
+		mockRepo.EXPECT().GetRefreshToken(gomock.Any(), input.RefreshToken).Return(refreshToken, nil)
+		mockRepo.EXPECT().RevokeRefreshToken(gomock.Any(), gomock.Any()).Return(nil)
+		mockRepo.EXPECT().GetByIDWithRole(gomock.Any(), gomock.Any()).Return(&domain.User{}, nil)
 		mockTokenService.EXPECT().Generate(gomock.Any(), gomock.Any(), gomock.Any()).Return("new-access", "new-refresh", time.Now(), nil)
 		mockTokenService.EXPECT().GetAccessTokenExpiry().Return(time.Minute * 15)
-		mockRepo.EXPECT().StoreRefreshToken(gomock.Any()).Return(nil)
+		mockRepo.EXPECT().StoreRefreshToken(gomock.Any(), gomock.Any()).Return(nil)
 
 		body, _ := json.Marshal(input)
 		req := httptest.NewRequest("POST", "/refresh", bytes.NewReader(body))
@@ -170,7 +171,7 @@ func TestRefresh(t *testing.T) {
 	t.Run("unauthorized", func(t *testing.T) {
 		input := dto.RefreshInput{RefreshToken: "invalid-token"}
 		// To test this path correctly, the GetRefreshToken should return an error.
-		mockRepo.EXPECT().GetRefreshToken(input.RefreshToken).Return(nil, autherror.ErrRefreshTokenNotFound)
+		mockRepo.EXPECT().GetRefreshToken(gomock.Any(), input.RefreshToken).Return(nil, autherror.ErrRefreshTokenNotFound)
 
 		body, _ := json.Marshal(input)
 		req := httptest.NewRequest("POST", "/refresh", bytes.NewReader(body))
@@ -194,8 +195,8 @@ func TestLogout(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		input := dto.LogoutInput{RefreshToken: "valid-token"}
-		mockRepo.EXPECT().GetRefreshToken(input.RefreshToken).Return(&domain.RefreshToken{}, nil)
-		mockRepo.EXPECT().RevokeRefreshToken(gomock.Any()).Return(nil)
+		mockRepo.EXPECT().GetRefreshToken(gomock.Any(), input.RefreshToken).Return(&domain.RefreshToken{}, nil)
+		mockRepo.EXPECT().RevokeRefreshToken(gomock.Any(), gomock.Any()).Return(nil)
 
 		body, _ := json.Marshal(input)
 		req := httptest.NewRequest("DELETE", "/logout", bytes.NewReader(body))
@@ -207,7 +208,7 @@ func TestLogout(t *testing.T) {
 
 	t.Run("bad request", func(t *testing.T) {
 		input := dto.LogoutInput{RefreshToken: "invalid-token"}
-		mockRepo.EXPECT().GetRefreshToken(input.RefreshToken).Return(nil, errors.New("some error"))
+		mockRepo.EXPECT().GetRefreshToken(gomock.Any(), input.RefreshToken).Return(nil, errors.New("some error"))
 
 		body, _ := json.Marshal(input)
 		req := httptest.NewRequest("DELETE", "/logout", bytes.NewReader(body))
@@ -231,7 +232,7 @@ func TestForceLogout(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		userID := "user-123"
-		mockRepo.EXPECT().RevokeAllRefreshTokensByUserID(userID).Return(nil)
+		mockRepo.EXPECT().RevokeAllRefreshTokensByUserID(gomock.Any(), userID).Return(nil)
 
 		req := httptest.NewRequest("DELETE", "/user/user-123/sessions", nil)
 
@@ -241,7 +242,7 @@ func TestForceLogout(t *testing.T) {
 
 	t.Run("internal server error", func(t *testing.T) {
 		userID := "user-123"
-		mockRepo.EXPECT().RevokeAllRefreshTokensByUserID(userID).Return(errors.New("some error"))
+		mockRepo.EXPECT().RevokeAllRefreshTokensByUserID(gomock.Any(), userID).Return(errors.New("some error"))
 
 		req := httptest.NewRequest("DELETE", "/user/user-123/sessions", nil)
 

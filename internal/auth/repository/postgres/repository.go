@@ -23,7 +23,7 @@ func NewPostgresRepository(db DBPool) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) GetByEmail(email string) (*domain.User, error) {
+func (r *Repository) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
 	query := `
 		SELECT u.id, u.email, u.password_hash, u.role_id, r.name as role_name, u.created_at, u.updated_at
 		FROM users u
@@ -31,7 +31,7 @@ func (r *Repository) GetByEmail(email string) (*domain.User, error) {
 		WHERE u.email = $1
 		LIMIT 1;
 	`
-	row := r.db.QueryRow(context.Background(), query, email)
+	row := r.db.QueryRow(ctx, query, email)
 
 	var user domain.User
 	err := row.Scan(
@@ -54,7 +54,7 @@ func (r *Repository) GetByEmail(email string) (*domain.User, error) {
 	return &user, nil
 }
 
-func (r *Repository) GetByIDWithRole(userID string) (*domain.User, error) {
+func (r *Repository) GetByIDWithRole(ctx context.Context, userID string) (*domain.User, error) {
 	query := `
 		SELECT u.id, u.email, u.password_hash, u.role_id, r.name AS role_name, u.created_at, u.updated_at
 		FROM users u
@@ -62,7 +62,7 @@ func (r *Repository) GetByIDWithRole(userID string) (*domain.User, error) {
 		WHERE u.id = $1
 		LIMIT 1;
 	`
-	row := r.db.QueryRow(context.Background(), query, userID)
+	row := r.db.QueryRow(ctx, query, userID)
 
 	var user domain.User
 	err := row.Scan(
@@ -85,8 +85,8 @@ func (r *Repository) GetByIDWithRole(userID string) (*domain.User, error) {
 	return &user, nil
 }
 
-func (r *Repository) Create(user *domain.User) error {
-	_, err := r.db.Exec(context.Background(), `
+func (r *Repository) Create(ctx context.Context, user *domain.User) error {
+	_, err := r.db.Exec(ctx, `
         INSERT INTO users (id, email, password_hash, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5)
     `, user.ID, user.Email, user.PasswordHash, user.CreatedAt, user.UpdatedAt)
@@ -94,19 +94,19 @@ func (r *Repository) Create(user *domain.User) error {
 	return err
 }
 
-func (r *Repository) StoreRefreshToken(rt *domain.RefreshToken) error {
+func (r *Repository) StoreRefreshToken(ctx context.Context, rt *domain.RefreshToken) error {
 	query := `INSERT INTO refresh_tokens (id, user_id, token, device_fingerprint, ip_address, user_agent, 
                             expires_at, created_at, revoked)
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
-	_, err := r.db.Exec(context.Background(), query,
+	_, err := r.db.Exec(ctx, query,
 		rt.ID, rt.UserID, rt.Token, rt.DeviceFingerprint, rt.IPAddress,
 		rt.UserAgent, rt.ExpiresAt, rt.CreatedAt, rt.Revoked)
 
 	return err
 }
 
-func (r *Repository) RecordLoginAttempt(email, ip string, success bool) error {
-	_, err := r.db.Exec(context.Background(), `
+func (r *Repository) RecordLoginAttempt(ctx context.Context, email, ip string, success bool) error {
+	_, err := r.db.Exec(ctx, `
 		INSERT INTO login_attempts (id, email, ip_address, attempt_time, successful)
 		VALUES (gen_random_uuid(), $1, $2, now(), $3)
 	`, email, ip, success)
@@ -114,8 +114,8 @@ func (r *Repository) RecordLoginAttempt(email, ip string, success bool) error {
 	return err
 }
 
-func (r *Repository) UpsertTrustedDevice(userID, fingerprint, userAgent, ip string) error {
-	_, err := r.db.Exec(context.Background(), `
+func (r *Repository) UpsertTrustedDevice(ctx context.Context, userID, fingerprint, userAgent, ip string) error {
+	_, err := r.db.Exec(ctx, `
 		INSERT INTO trusted_devices (
 			id, user_id, device_fingerprint, user_agent, ip_address, last_seen, created_at
 		) VALUES (
@@ -131,8 +131,8 @@ func (r *Repository) UpsertTrustedDevice(userID, fingerprint, userAgent, ip stri
 	return err
 }
 
-func (r *Repository) GetRefreshToken(token string) (*domain.RefreshToken, error) {
-	row := r.db.QueryRow(context.Background(), `
+func (r *Repository) GetRefreshToken(ctx context.Context, token string) (*domain.RefreshToken, error) {
+	row := r.db.QueryRow(ctx, `
 		SELECT id, user_id, token, device_fingerprint, ip_address, user_agent, expires_at, created_at, revoked
 		FROM refresh_tokens
 		WHERE token = $1
@@ -160,14 +160,14 @@ func (r *Repository) GetRefreshToken(token string) (*domain.RefreshToken, error)
 	return &rt, nil
 }
 
-func (r *Repository) RevokeRefreshToken(id string) error {
-	_, err := r.db.Exec(context.Background(),
+func (r *Repository) RevokeRefreshToken(ctx context.Context, id string) error {
+	_, err := r.db.Exec(ctx,
 		`UPDATE refresh_tokens SET revoked = TRUE WHERE id = $1`, id)
 
 	return err
 }
 
-func (r *Repository) GetActiveCountByUserID(userID string) (int, error) {
+func (r *Repository) GetActiveCountByUserID(ctx context.Context, userID string) (int, error) {
 	query := `
 		SELECT COUNT(id)
 		FROM refresh_tokens
@@ -176,7 +176,7 @@ func (r *Repository) GetActiveCountByUserID(userID string) (int, error) {
 		  AND expires_at > NOW()
 	`
 	var count int
-	err := r.db.QueryRow(context.Background(), query, userID).Scan(&count)
+	err := r.db.QueryRow(ctx, query, userID).Scan(&count)
 	if err != nil {
 		return 0, err
 	}
@@ -184,7 +184,7 @@ func (r *Repository) GetActiveCountByUserID(userID string) (int, error) {
 	return count, nil
 }
 
-func (r *Repository) DeleteOldestByUserID(userID string) error {
+func (r *Repository) DeleteOldestByUserID(ctx context.Context, userID string) error {
 	query := `
 		DELETE FROM refresh_tokens
 		WHERE id = (
@@ -194,7 +194,7 @@ func (r *Repository) DeleteOldestByUserID(userID string) error {
 			LIMIT 1
 		)
 	`
-	_, err := r.db.Exec(context.Background(), query, userID)
+	_, err := r.db.Exec(ctx, query, userID)
 	if err != nil {
 		return fmt.Errorf("failed to delete oldest refresh token for user %s: %w", userID, err)
 	}
@@ -202,14 +202,14 @@ func (r *Repository) DeleteOldestByUserID(userID string) error {
 	return nil
 }
 
-func (r *Repository) RevokeAllRefreshTokensByUserID(userID string) error {
+func (r *Repository) RevokeAllRefreshTokensByUserID(ctx context.Context, userID string) error {
 	query := `UPDATE refresh_tokens SET revoked = TRUE WHERE user_id = $1 AND revoked = FALSE`
-	_, err := r.db.Exec(context.Background(), query, userID)
+	_, err := r.db.Exec(ctx, query, userID)
 
 	return err
 }
 
-func (r *Repository) CountRecentFailedAttempts(email, ip string, withinMinutes int) (int, error) {
+func (r *Repository) CountRecentFailedAttempts(ctx context.Context, email, ip string, withinMinutes int) (int, error) {
 	query := fmt.Sprintf(`
 		SELECT COUNT(*)
 		FROM login_attempts
@@ -220,7 +220,7 @@ func (r *Repository) CountRecentFailedAttempts(email, ip string, withinMinutes i
 	`, withinMinutes)
 
 	var count int
-	err := r.db.QueryRow(context.Background(), query, email, ip).Scan(&count)
+	err := r.db.QueryRow(ctx, query, email, ip).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count recent failed attempts: %w", err)
 	}

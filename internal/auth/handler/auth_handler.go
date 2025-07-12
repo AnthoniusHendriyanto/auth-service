@@ -48,7 +48,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		return sendError(c, fiber.StatusBadRequest, err)
 	}
 
-	user, err := h.userService.Register(input)
+	user, err := h.userService.Register(c.Context(), input)
 	if err != nil {
 		return sendError(c, fiber.StatusBadRequest, err)
 	}
@@ -69,7 +69,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	input.UserAgent = string(c.Request().Header.UserAgent())
 	input.Fingerprint = c.Get("X-Device-Fingerprint")
 
-	tokenPair, err := h.userService.Login(input)
+	tokenPair, err := h.userService.Login(c.Context(), input)
 	if err != nil {
 		if errors.Is(err, autherror.ErrTooManyLoginAttempts) {
 			return sendError(c, fiber.StatusTooManyRequests, err)
@@ -91,7 +91,7 @@ func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
 	input.IPAddress = c.IP()
 	input.UserAgent = string(c.Request().Header.UserAgent())
 
-	tokens, err := h.userService.Refresh(input)
+	tokens, err := h.userService.Refresh(c.Context(), input)
 	if err != nil {
 		return sendError(c, fiber.StatusUnauthorized, err)
 	}
@@ -105,7 +105,7 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 		return sendError(c, fiber.StatusBadRequest, err)
 	}
 
-	if err := h.userService.Logout(input.RefreshToken); err != nil {
+	if err := h.userService.Logout(c.Context(), input.RefreshToken); err != nil {
 		return sendError(c, fiber.StatusBadRequest, err)
 	}
 
@@ -120,7 +120,7 @@ func (h *AuthHandler) ForceLogout(c *fiber.Ctx) error {
 		return sendError(c, fiber.StatusBadRequest, fiber.NewError(fiber.StatusBadRequest, "userID is required"))
 	}
 
-	if err := h.userService.ForceLogoutByUserID(userID); err != nil {
+	if err := h.userService.ForceLogoutByUserID(c.Context(), userID); err != nil {
 		return sendError(c, fiber.StatusInternalServerError, err)
 	}
 

@@ -112,7 +112,7 @@ func TestRequireRoleMiddleware(t *testing.T) {
 		// 1. Middleware checks the token
 		mockTokenService.EXPECT().VerifyAccessToken("admin-token").Return(adminClaims, nil)
 		// 2. Middleware passes, handler is called, which calls the repo
-		mockRepo.EXPECT().RevokeAllRefreshTokensByUserID(userID).Return(nil)
+		mockRepo.EXPECT().RevokeAllRefreshTokensByUserID(gomock.Any(), userID).Return(nil)
 
 		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/v1/user/%s/sessions", userID), nil)
 		req.Header.Set("Authorization", "Bearer admin-token")

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -27,8 +28,8 @@ func NewUserService(repo domain.UserRepository, tokenService TokenGenerator, cfg
 	}
 }
 
-func (s *UserService) Register(input dto.RegisterInput) (*domain.User, error) {
-	existingUser, err := s.repo.GetByEmail(input.Email)
+func (s *UserService) Register(ctx context.Context, input dto.RegisterInput) (*domain.User, error) {
+	existingUser, err := s.repo.GetByEmail(ctx, input.Email)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +53,7 @@ func (s *UserService) Register(input dto.RegisterInput) (*domain.User, error) {
 		UpdatedAt:    now,
 	}
 
-	err = s.repo.Create(user)
+	err = s.repo.Create(ctx, user)
 	if err != nil {
 		return nil, err
 	}
@@ -60,9 +61,9 @@ func (s *UserService) Register(input dto.RegisterInput) (*domain.User, error) {
 	return user, nil
 }
 
-func (s *UserService) Login(input dto.LoginInput) (*dto.TokenResponse, error) {
+func (s *UserService) Login(ctx context.Context, input dto.LoginInput) (*dto.TokenResponse, error) {
 	// 1. Brute-force check
-	failedAttempts, err := s.repo.CountRecentFailedAttempts(input.Email, input.IPAddress, s.cfg.MaxActiveRefreshTokens)
+	failedAttempts, err := s.repo.CountRecentFailedAttempts(ctx, input.Email, input.IPAddress, s.cfg.MaxActiveRefreshTokens)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check login attempts: %w", err)
 	}
@@ -72,13 +73,13 @@ func (s *UserService) Login(input dto.LoginInput) (*dto.TokenResponse, error) {
 	}
 
 	// 2. Check user credentials
-	user, err := s.repo.GetByEmail(input.Email)
+	user, err := s.repo.GetByEmail(ctx, input.Email)
 	if err != nil {
 		return nil, err
 	}
 
 	if user == nil || bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(input.Password)) != nil {
-		_ = s.repo.RecordLoginAttempt(input.Email, input.IPAddress, false)
+		_ = s.repo.RecordLoginAttempt(ctx, input.Email, input.IPAddress, false)
 
 		return nil, autherror.ErrInvalidCredentials
 	}
@@ -103,15 +104,15 @@ func (s *UserService) Login(input dto.LoginInput) (*dto.TokenResponse, error) {
 		Revoked:           false,
 	}
 
-	if err := s.repo.StoreRefreshToken(refreshTokenObj); err != nil {
+	if err := s.repo.StoreRefreshToken(ctx, refreshTokenObj); err != nil {
 		return nil, err
 	}
 
-	if err = s.repo.UpsertTrustedDevice(user.ID, input.Fingerprint, input.UserAgent, input.IPAddress); err != nil {
+	if err = s.repo.UpsertTrustedDevice(ctx, user.ID, input.Fingerprint, input.UserAgent, input.IPAddress); err != nil {
 		return nil, err
 	}
 
-	if err = s.repo.RecordLoginAttempt(input.Email, input.IPAddress, true); err != nil {
+	if err = s.repo.RecordLoginAttempt(ctx, input.Email, input.IPAddress, true); err != nil {
 		return nil, err
 	}
 
@@ -123,21 +124,21 @@ func (s *UserService) Login(input dto.LoginInput) (*dto.TokenResponse, error) {
 	}, nil
 }
 
-func (s *UserService) Refresh(input dto.RefreshInput) (*dto.TokenResponse, error) {
-	token, err := s.ValidateRefreshToken(input)
+func (s *UserService) Refresh(ctx context.Context, input dto.RefreshInput) (*dto.TokenResponse, error) {
+	token, err := s.ValidateRefreshToken(ctx, input)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.repo.RevokeRefreshToken(token.ID); err != nil {
+	if err := s.repo.RevokeRefreshToken(ctx, token.ID); err != nil {
 		return nil, fmt.Errorf("failed to revoke token: %w", err)
 	}
 
-	return s.GenerateAndStoreNewTokens(token, input)
+	return s.GenerateAndStoreNewTokens(ctx, token, input)
 }
 
-func (s *UserService) Logout(refreshToken string) error {
-	token, err := s.repo.GetRefreshToken(refreshToken)
+func (s *UserService) Logout(ctx context.Context, refreshToken string) error {
+	token, err := s.repo.GetRefreshToken(ctx, refreshToken)
 	if err != nil || token == nil {
 		return autherror.ErrRefreshTokenNotFound
 	}
@@ -146,15 +147,15 @@ func (s *UserService) Logout(refreshToken string) error {
 		return autherror.ErrRefreshTokenRevoked
 	}
 
-	return s.repo.RevokeRefreshToken(token.ID)
+	return s.repo.RevokeRefreshToken(ctx, token.ID)
 }
 
-func (s *UserService) ForceLogoutByUserID(userID string) error {
-	return s.repo.RevokeAllRefreshTokensByUserID(userID)
+func (s *UserService) ForceLogoutByUserID(ctx context.Context, userID string) error {
+	return s.repo.RevokeAllRefreshTokensByUserID(ctx, userID)
 }
 
-func (s *UserService) ValidateRefreshToken(input dto.RefreshInput) (*domain.RefreshToken, error) {
-	token, err := s.repo.GetRefreshToken(input.RefreshToken)
+func (s *UserService) ValidateRefreshToken(ctx context.Context, input dto.RefreshInput) (*domain.RefreshToken, error) {
+	token, err := s.repo.GetRefreshToken(ctx, input.RefreshToken)
 	if err != nil || token == nil {
 		return nil, autherror.ErrRefreshTokenNotFound
 	}
@@ -174,9 +175,9 @@ func (s *UserService) ValidateRefreshToken(input dto.RefreshInput) (*domain.Refr
 	return token, nil
 }
 
-func (s *UserService) GenerateAndStoreNewTokens(oldToken *domain.RefreshToken,
+func (s *UserService) GenerateAndStoreNewTokens(ctx context.Context, oldToken *domain.RefreshToken,
 	input dto.RefreshInput) (*dto.TokenResponse, error) {
-	user, err := s.repo.GetByIDWithRole(oldToken.UserID)
+	user, err := s.repo.GetByIDWithRole(ctx, oldToken.UserID)
 	if err != nil || user == nil {
 		return nil, fmt.Errorf("user not found for token refresh")
 	}
@@ -198,7 +199,7 @@ func (s *UserService) GenerateAndStoreNewTokens(oldToken *domain.RefreshToken,
 		Revoked:           false,
 	}
 
-	if err := s.repo.StoreRefreshToken(newToken); err != nil {
+	if err := s.repo.StoreRefreshToken(ctx, newToken); err != nil {
 		return nil, fmt.Errorf("failed to store new refresh token: %w", err)
 	}
 
