@@ -164,7 +164,7 @@ Revokes all active refresh tokens for a specific user **(Admin only)**.
 **Example Request:**
 
 ```bash
-curl -X DELETE http://localhost:8080/api/v1/user/user-id/sessions \
+curl -X DELETE http://localhost:8080/api/v1/admin/user/user-id/sessions \
 -H "Authorization: Bearer your_admin_access_token"
 ```
 
